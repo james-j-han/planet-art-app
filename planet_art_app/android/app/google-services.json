@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "935728739336",
+    "project_id": "planet-art-app",
+    "storage_bucket": "planet-art-app.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:935728739336:android:158f1e8cb691fc59bdcdbd",
+        "android_client_info": {
+          "package_name": "com.example.planet_art_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpi-sTnJpMNjn6EKWc8fLHDlftlS91JNA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
