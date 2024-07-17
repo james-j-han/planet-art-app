@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:planet_art_app/widget_tree.dart';
 
 import 'firebase_options.dart';
@@ -7,6 +11,11 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Directory appDocDir = await getApplicationDocumentsDirectory();
+  // String appDocPath = appDocDir.path;
+  // print(appDocPath);
+  var envPath = 'assets/.env';
+  await dotenv.load(fileName: envPath);
   runApp(const MyApp());
 }
 

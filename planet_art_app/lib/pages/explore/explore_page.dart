@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
 
@@ -39,7 +40,8 @@ class _ExplorePageState extends State<ExplorePage> {
   }
 
   void getSuggestion(String input) async {
-    const String PLACES_API_KEY = 'AIzaSyALDRnIRGMgqKMfVK5vXOjSgQ3jpxBUa98';
+    // Load API KEY from .env
+    String PLACES_API_KEY = dotenv.env['API_KEY'] ?? 'No API key found';
 
     try {
       String baseURL =
