@@ -8,7 +8,7 @@ import 'package:planet_art_app/pages/message/message_page.dart';
 import '../auth.dart';
 
 class HomePage extends StatefulWidget {
-  HomePage({super.key});
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
