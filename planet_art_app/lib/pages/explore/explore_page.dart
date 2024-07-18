@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -15,6 +16,7 @@ class ExplorePage extends StatefulWidget {
 
 class _ExplorePageState extends State<ExplorePage> {
   final _textController = TextEditingController();
+  Timer? _debounce;
   // Control sessions
   var uuid = const Uuid();
   String _sessionToken = '1234567890';
@@ -24,19 +26,26 @@ class _ExplorePageState extends State<ExplorePage> {
   @override
   void initState() {
     super.initState();
-    _textController.addListener(() {
-      _onChanged();
-    });
+    _textController.addListener(_onChanged);
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    if (_debounce?.isActive ?? false) _debounce?.cancel();
+    super.dispose();
   }
 
   void _onChanged() {
-    if (_sessionToken == null) {
-      setState(() {
-        _sessionToken = uuid.v4();
-      });
-    }
-
-    getSuggestion(_textController.text);
+    if (_debounce?.isActive ?? false) _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 2000), () {
+      if (_sessionToken == null) {
+        setState(() {
+          _sessionToken = uuid.v4();
+        });
+      }
+      getSuggestion(_textController.text);
+    });
   }
 
   void getSuggestion(String input) async {
