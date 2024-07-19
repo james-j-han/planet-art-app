@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:planet_art_app/auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'connections_page.dart'; 
+import 'settings_page.dart';
 
 class AccountPage extends StatelessWidget {
   // these will be updated dynamically
@@ -48,7 +49,7 @@ class AccountPage extends StatelessWidget {
           ],
         ),
       ),
-      endDrawer: _buildDrawer(),
+      endDrawer: _buildDrawer(context),
     );
   }
 
@@ -159,7 +160,7 @@ class AccountPage extends StatelessWidget {
     );
   }
 
-  Widget _buildDrawer() {
+  Widget _buildDrawer(BuildContext context) {
     return Drawer(
       child: Column(
         children: [
@@ -167,10 +168,14 @@ class AccountPage extends StatelessWidget {
             child: ListView(
               children: <Widget>[
                 ListTile(
+                  // for settings page
                   title: Text('Settings'),
                   leading: Icon(Icons.settings),
                   onTap: () {
-                    // open settings
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => SettingsPage()),
+                    );
                   },
                 ),
                 ListTile(
