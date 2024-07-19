@@ -23,9 +23,9 @@ class PostsPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildPostHeader(post['imageUrl']!),
-                SizedBox(height: 8.0), // Space between header and image
+                SizedBox(height: 8.0), 
                 AspectRatio(
-                  aspectRatio: 1.0, // Maintain square aspect ratio
+                  aspectRatio: 1.0, 
                   child: CachedNetworkImage(
                     imageUrl: post['imageUrl']!,
                     fit: BoxFit.cover,
@@ -42,7 +42,7 @@ class PostsPage extends StatelessWidget {
                   padding: const EdgeInsets.all(16.0),
                   child: Text(post['description']!),
                 ),
-                SizedBox(height: 16.0), // Space at the end of each post
+                SizedBox(height: 16.0), // space at the end of each post
               ],
             ),
           );
@@ -53,7 +53,7 @@ class PostsPage extends StatelessWidget {
 
   Widget _buildPostHeader(String profileImageUrl) {
     return Container(
-      color: Colors.grey[200], // Light gray background color
+      color: Colors.grey[200], // header color, change later
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Row(
         children: [

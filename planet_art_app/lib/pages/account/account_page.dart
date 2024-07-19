@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:planet_art_app/auth.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'posts.dart'; // Import the posts page
+import 'connections_page.dart'; 
 
 class AccountPage extends StatelessWidget {
   // these will be updated dynamically
@@ -43,8 +43,8 @@ class AccountPage extends StatelessWidget {
         child: Column(
           children: [
             _buildProfileHeader(),
-            _buildBioSection(),
-            _buildPostsGrid(context), // Pass context to the grid
+            _buildBioSection(context),
+            _buildPostsGrid(),
           ],
         ),
       ),
@@ -59,7 +59,7 @@ class AccountPage extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 40,
-            backgroundImage: CachedNetworkImageProvider(profileImageUrl), //dynamic profile photo
+            backgroundImage: CachedNetworkImageProvider(profileImageUrl),
           ),
           SizedBox(width: 16),
           Expanded(
@@ -91,7 +91,7 @@ class AccountPage extends StatelessWidget {
     );
   }
 
-  Widget _buildBioSection() {
+  Widget _buildBioSection(BuildContext context) { 
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -119,7 +119,10 @@ class AccountPage extends StatelessWidget {
               ),
               ElevatedButton(
                 onPressed: () {
-                  // open connections page
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ConnectionsPage()),
+                  );
                 },
                 child: Text(
                   '$connections Connections',
@@ -132,13 +135,10 @@ class AccountPage extends StatelessWidget {
     );
   }
 
-  Widget _buildPostsGrid(BuildContext context) {
-    // Dummy data for posts
-    final List<Map<String, String>> posts = List.generate(30, (index) => {
-          'imageUrl': 'https://your-image-url.com/post$index.jpg',
-          'title': 'Artwork Title $index',
-          'description': 'Description of artwork $index'
-        });
+  Widget _buildPostsGrid() {
+    // temp data for posts
+    final List<String> posts = List.generate(
+        30, (index) => 'https://your-image-url.com/post$index.jpg');
 
     return GridView.builder(
       padding: EdgeInsets.all(16.0),
@@ -146,31 +146,14 @@ class AccountPage extends StatelessWidget {
       physics: NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 10.0,
-        mainAxisSpacing: 10.0,
-        childAspectRatio: 1.0,
+        crossAxisSpacing: 4.0,
+        mainAxisSpacing: 4.0,
       ),
       itemCount: posts.length,
       itemBuilder: (context, index) {
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => PostsPage(
-                  posts: posts,
-                  initialIndex: index,
-                ),
-              ),
-            );
-          },
-          child: AspectRatio(
-            aspectRatio: 1.0, // Maintain square aspect ratio
-            child: CachedNetworkImage(
-              imageUrl: posts[index]['imageUrl']!,
-              fit: BoxFit.cover,
-            ),
-          ),
+        return CachedNetworkImage(
+          imageUrl: posts[index],
+          fit: BoxFit.cover,
         );
       },
     );
@@ -194,7 +177,7 @@ class AccountPage extends StatelessWidget {
                   title: Text('Saved Events'),
                   leading: Icon(Icons.bookmark),
                   onTap: () {
-                    // Handle saved events tap
+                    // open saved events
                   },
                 ),
               ],
