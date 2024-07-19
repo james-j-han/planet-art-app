@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 class AccountPage extends StatelessWidget {
   // these will be updated dynamically
   final String profileImageUrl = 'https://your-image-url.com/profile.jpg';
+  final String username = 'your_username';
   final String name = 'Your Name';
   final String linkUrl = 'myportfolio.com';
   final String occupation = 'Your occupation';
@@ -26,7 +27,7 @@ class AccountPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(name),
+        title: Text(username),
         actions: [
           Builder(
             builder: (BuildContext context) => IconButton(
