@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:planet_art_app/auth.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'connections_page.dart'; 
+import 'connections_page.dart';
 import 'settings_page.dart';
+import 'add_post_page.dart';
 
 class AccountPage extends StatelessWidget {
   // these will be updated dynamically
@@ -49,6 +50,15 @@ class AccountPage extends StatelessWidget {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => AddPostPage()),
+          );
+        },
+        child: Icon(Icons.add),
+      ),
       endDrawer: _buildDrawer(context),
     );
   }
@@ -92,7 +102,7 @@ class AccountPage extends StatelessWidget {
     );
   }
 
-  Widget _buildBioSection(BuildContext context) { 
+  Widget _buildBioSection(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -139,7 +149,7 @@ class AccountPage extends StatelessWidget {
   Widget _buildPostsGrid() {
     // temp data for posts
     final List<String> posts = List.generate(
-        30, (index) => 'https://your-image-url.com/post$index.jpg');
+        30, (index) => 'https://i.natgeofe.com/n/548467d8-c5f1-4551-9f58-6817a8d2c45e/NationalGeographic_2572187_square.jpg');
 
     return GridView.builder(
       padding: EdgeInsets.all(16.0),
@@ -168,7 +178,6 @@ class AccountPage extends StatelessWidget {
             child: ListView(
               children: <Widget>[
                 ListTile(
-                  // for settings page
                   title: Text('Settings'),
                   leading: Icon(Icons.settings),
                   onTap: () {
