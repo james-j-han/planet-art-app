@@ -23,19 +23,9 @@ class _HomePageState extends State<HomePage> {
     await Auth().signOut();
   }
 
-  Widget _title() {
-    return const Text('Firebase Auth');
-  }
-
+ 
   Widget _userUid() {
     return Text(user?.email ?? 'User email');
-  }
-
-  Widget _signOutButton() {
-    return ElevatedButton(
-      onPressed: signOut,
-      child: const Text('Sign Out'),
-    );
   }
 
   Widget _mainNavigationBar() {
@@ -62,15 +52,15 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  final List<Widget> _pages = const [
+  final List<Widget> _pages = [
     Center(
-      child: ExplorePage(),
+      child: const ExplorePage(),
     ),
     Center(
-      child: EventPage(),
+      child: const EventPage(),
     ),
     Center(
-      child: MessagePage(),
+      child: const MessagePage(),
     ),
     Center(
       child: AccountPage(),
@@ -80,24 +70,12 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: _title(),
-        actions: [_signOutButton()],
-      ),
+      
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,
       ),
       bottomNavigationBar: _mainNavigationBar(),
-      // child: Column(
-      //   crossAxisAlignment: CrossAxisAlignment.center,
-      //   mainAxisAlignment: MainAxisAlignment.center,
-      //   children: <Widget>[
-      //     _userUid(),
-      //     _signOutButton(),
-      //   ],
-      // ),
     );
   }
 }
