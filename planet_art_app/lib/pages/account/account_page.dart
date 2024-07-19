@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:planet_art_app/auth.dart';
 import 'package:url_launcher/url_launcher.dart';
-
+import 'posts.dart'; // Import the posts page
 
 class AccountPage extends StatelessWidget {
   // these will be updated dynamically
@@ -33,7 +33,7 @@ class AccountPage extends StatelessWidget {
             builder: (BuildContext context) => IconButton(
               icon: Icon(Icons.menu),
               onPressed: () {
-                Scaffold.of(context).openEndDrawer(); 
+                Scaffold.of(context).openEndDrawer();
               },
             ),
           ),
@@ -44,11 +44,11 @@ class AccountPage extends StatelessWidget {
           children: [
             _buildProfileHeader(),
             _buildBioSection(),
-            _buildPostsGrid(),
+            _buildPostsGrid(context), // Pass context to the grid
           ],
         ),
       ),
-      endDrawer: _buildDrawer(), 
+      endDrawer: _buildDrawer(),
     );
   }
 
@@ -132,10 +132,13 @@ class AccountPage extends StatelessWidget {
     );
   }
 
-  Widget _buildPostsGrid() {
+  Widget _buildPostsGrid(BuildContext context) {
     // Dummy data for posts
-    final List<String> posts = List.generate(
-        30, (index) => 'https://your-image-url.com/post$index.jpg');
+    final List<Map<String, String>> posts = List.generate(30, (index) => {
+          'imageUrl': 'https://your-image-url.com/post$index.jpg',
+          'title': 'Artwork Title $index',
+          'description': 'Description of artwork $index'
+        });
 
     return GridView.builder(
       padding: EdgeInsets.all(16.0),
@@ -143,14 +146,31 @@ class AccountPage extends StatelessWidget {
       physics: NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 4.0,
-        mainAxisSpacing: 4.0,
+        crossAxisSpacing: 10.0,
+        mainAxisSpacing: 10.0,
+        childAspectRatio: 1.0,
       ),
       itemCount: posts.length,
       itemBuilder: (context, index) {
-        return CachedNetworkImage(
-          imageUrl: posts[index],
-          fit: BoxFit.cover,
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PostsPage(
+                  posts: posts,
+                  initialIndex: index,
+                ),
+              ),
+            );
+          },
+          child: AspectRatio(
+            aspectRatio: 1.0, // Maintain square aspect ratio
+            child: CachedNetworkImage(
+              imageUrl: posts[index]['imageUrl']!,
+              fit: BoxFit.cover,
+            ),
+          ),
         );
       },
     );
