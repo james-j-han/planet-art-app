@@ -1,21 +1,64 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:planet_art_app/auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'connections_page.dart';
 import 'settings_page.dart';
+import 'edit_profile_page.dart';
 import 'add_post_page.dart';
+import 'user_service.dart';
+import '../../auth.dart'; // Ensure you import Auth for sign out functionality
 
-class AccountPage extends StatelessWidget {
-  // these will be updated dynamically
-  final String profileImageUrl = 'https://your-image-url.com/profile.jpg';
-  final String username = 'your_username';
-  final String name = 'Your Name';
-  final String linkUrl = 'myportfolio.com';
-  final String occupation = 'Your occupation';
-  final String pronouns = 'Your pronouns';
-  final String bio = 'Your bio goes here.';
-  final int connections = 120;
+class AccountPage extends StatefulWidget {
+  @override
+  _AccountPageState createState() => _AccountPageState();
+}
+
+class _AccountPageState extends State<AccountPage> {
+  String uid = '';
+  String name = '';
+  String occupation = '';
+  String bio = '';
+  String profileImageUrl = 'https://your-image-url.com/profile.jpg';
+  String portfolioLink = ''; // Add a field for the portfolio link
+  int connections = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentUser();
+  }
+
+  void _getCurrentUser() async {
+    User? user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      setState(() {
+        uid = user.uid;
+      });
+      _getUserProfile();
+    } else {
+      print('No user is signed in.');
+    }
+  }
+
+  void _getUserProfile() async {
+    if (uid.isNotEmpty) {
+      UserService userService = UserService();
+      Map<String, dynamic>? userData = await userService.getUserProfile();
+
+      if (userData != null) {
+        setState(() {
+          name = userData['name'] ?? 'No Name';
+          occupation = userData['occupation'] ?? 'No Occupation';
+          bio = userData['bio'] ?? 'No Bio';
+          profileImageUrl = userData['profileImageUrl'] ?? 'https://your-image-url.com/profile.jpg';
+          connections = userData['connections'] ?? 0;
+          portfolioLink = userData['portfolioLink'] ?? ''; // Fetch the portfolio link
+        });
+      }
+    }
+  }
 
   void _launchURL(String url) async {
     if (await canLaunch(url)) {
@@ -25,21 +68,29 @@ class AccountPage extends StatelessWidget {
     }
   }
 
+  void _editProfile() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => EditProfilePage()),
+    );
+
+    // If there's a result, update the profile
+    if (result != null && result is Map<String, dynamic>) {
+      setState(() {
+        name = result['name'] ?? name;
+        occupation = result['occupation'] ?? occupation;
+        bio = result['bio'] ?? bio;
+        profileImageUrl = result['profileImageUrl'] ?? profileImageUrl;
+        portfolioLink = result['portfolioLink'] ?? portfolioLink;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(username),
-        actions: [
-          Builder(
-            builder: (BuildContext context) => IconButton(
-              icon: Icon(Icons.menu),
-              onPressed: () {
-                Scaffold.of(context).openEndDrawer();
-              },
-            ),
-          ),
-        ],
+        title: Text(name),
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -85,7 +136,7 @@ class AccountPage extends StatelessWidget {
                     ),
                     SizedBox(width: 8),
                     Text(
-                      pronouns,
+                      'pronouns', // Replace with actual pronouns if available
                       style: TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                   ],
@@ -114,20 +165,21 @@ class AccountPage extends StatelessWidget {
           ),
           SizedBox(height: 16),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              GestureDetector(
-                onTap: () {
-                  _launchURL(linkUrl);
-                },
-                child: Text(
-                  'myportfolio.com',
-                  style: TextStyle(
-                    color: Colors.blue,
-                    decoration: TextDecoration.underline,
+              if (portfolioLink.isNotEmpty) // Show portfolio link if available
+                GestureDetector(
+                  onTap: () {
+                    _launchURL(portfolioLink); // Use the correct URL
+                  },
+                  child: Text(
+                    portfolioLink,
+                    style: TextStyle(
+                      color: Colors.blue,
+                      decoration: TextDecoration.underline,
+                    ),
                   ),
                 ),
-              ),
+              Spacer(), // Pushes the connections button to the right
               ElevatedButton(
                 onPressed: () {
                   Navigator.push(
@@ -177,6 +229,11 @@ class AccountPage extends StatelessWidget {
           Expanded(
             child: ListView(
               children: <Widget>[
+                ListTile(
+                  title: Text('Edit Profile'),
+                  leading: Icon(Icons.edit),
+                  onTap: _editProfile,
+                ),
                 ListTile(
                   title: Text('Settings'),
                   leading: Icon(Icons.settings),
