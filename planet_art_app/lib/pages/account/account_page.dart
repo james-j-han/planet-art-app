@@ -6,8 +6,9 @@ import 'connections_page.dart';
 import 'settings_page.dart';
 import 'edit_profile_page.dart';
 import 'add_post_page.dart';
-import 'user_service.dart';
-import '../../auth.dart'; // Ensure you import Auth for sign out functionality
+import 'posts.dart';
+import '../../auth.dart'; 
+import 'user_service.dart'; 
 
 class AccountPage extends StatefulWidget {
   @override
@@ -16,12 +17,14 @@ class AccountPage extends StatefulWidget {
 
 class _AccountPageState extends State<AccountPage> {
   String uid = '';
+  String pronouns = '';
   String name = '';
   String occupation = '';
   String bio = '';
-  String profileImageUrl = 'https://your-image-url.com/profile.jpg';
-  String portfolioLink = ''; // Add a field for the portfolio link
+  String profileImageUrl = '';
+  String portfolioLink = ''; 
   int connections = 0;
+  List<Map<String, dynamic>> posts = [];
 
   @override
   void initState() {
@@ -37,6 +40,7 @@ class _AccountPageState extends State<AccountPage> {
         uid = user.uid;
       });
       _getUserProfile();
+      _getUserPosts(); 
     } else {
       print('No user is signed in.');
     }
@@ -52,14 +56,26 @@ class _AccountPageState extends State<AccountPage> {
           name = userData['name'] ?? 'No Name';
           occupation = userData['occupation'] ?? 'No Occupation';
           bio = userData['bio'] ?? 'No Bio';
-          profileImageUrl = userData['profileImageUrl'] ?? 'https://your-image-url.com/profile.jpg';
+          pronouns =userData['pronouns'] ?? '';
+          profileImageUrl = userData['profileImageUrl'] ?? '';
           connections = userData['connections'] ?? 0;
-          portfolioLink = userData['portfolioLink'] ?? ''; // Fetch the portfolio link
+          portfolioLink = userData['portfolioLink'] ?? ''; 
         });
       }
     }
   }
 
+  void _getUserPosts() async {
+    if (uid.isNotEmpty) {
+      UserService userService = UserService();
+      List<Map<String, dynamic>> userPosts = await userService.getUserPosts(uid);
+
+      setState(() {
+        posts = userPosts;
+      });
+    }
+  }
+  // url launch package
   void _launchURL(String url) async {
     if (await canLaunch(url)) {
       await launch(url);
@@ -74,17 +90,45 @@ class _AccountPageState extends State<AccountPage> {
       MaterialPageRoute(builder: (context) => EditProfilePage()),
     );
 
-    // If there's a result, update the profile
+    // if there's a result, update the profile
     if (result != null && result is Map<String, dynamic>) {
       setState(() {
         name = result['name'] ?? name;
         occupation = result['occupation'] ?? occupation;
         bio = result['bio'] ?? bio;
+        pronouns = result['pronouns'] ?? pronouns;
         profileImageUrl = result['profileImageUrl'] ?? profileImageUrl;
         portfolioLink = result['portfolioLink'] ?? portfolioLink;
       });
     }
   }
+
+  void _viewPost(Map<String, dynamic> post) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PostsPage(
+          posts: [post],
+          initialIndex: 0, //for post page scroll
+          name: name, // pass the user's name
+        ),
+      ),
+    );
+  }
+  void _onPostTap(int index) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PostsPage(
+          posts: posts,
+          initialIndex: index,
+          name: name,
+        ),
+      ),
+    );
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +150,7 @@ class _AccountPageState extends State<AccountPage> {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => AddPostPage()),
-          );
+          ).then((_) => _getUserPosts()); // refresh posts after adding a new one
         },
         child: Icon(Icons.add),
       ),
@@ -136,7 +180,7 @@ class _AccountPageState extends State<AccountPage> {
                     ),
                     SizedBox(width: 8),
                     Text(
-                      'pronouns', // Replace with actual pronouns if available
+                      pronouns,
                       style: TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                   ],
@@ -166,10 +210,10 @@ class _AccountPageState extends State<AccountPage> {
           SizedBox(height: 16),
           Row(
             children: [
-              if (portfolioLink.isNotEmpty) // Show portfolio link if available
+              if (portfolioLink.isNotEmpty) 
                 GestureDetector(
                   onTap: () {
-                    _launchURL(portfolioLink); // Use the correct URL
+                    _launchURL(portfolioLink); 
                   },
                   child: Text(
                     portfolioLink,
@@ -179,7 +223,7 @@ class _AccountPageState extends State<AccountPage> {
                     ),
                   ),
                 ),
-              Spacer(), // Pushes the connections button to the right
+              Spacer(), // pushes the connections button to the right
               ElevatedButton(
                 onPressed: () {
                   Navigator.push(
@@ -199,10 +243,6 @@ class _AccountPageState extends State<AccountPage> {
   }
 
   Widget _buildPostsGrid() {
-    // temp data for posts
-    final List<String> posts = List.generate(
-        30, (index) => 'https://i.natgeofe.com/n/548467d8-c5f1-4551-9f58-6817a8d2c45e/NationalGeographic_2572187_square.jpg');
-
     return GridView.builder(
       padding: EdgeInsets.all(16.0),
       shrinkWrap: true,
@@ -214,9 +254,12 @@ class _AccountPageState extends State<AccountPage> {
       ),
       itemCount: posts.length,
       itemBuilder: (context, index) {
-        return CachedNetworkImage(
-          imageUrl: posts[index],
+      return GestureDetector(
+        onTap: () => _onPostTap(index), // go to PostsPage on tap
+        child: CachedNetworkImage(
+          imageUrl: posts[index]['imageUrl'],
           fit: BoxFit.cover,
+          ),
         );
       },
     );
