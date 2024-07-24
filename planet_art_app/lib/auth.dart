@@ -52,7 +52,7 @@ Future<void> addPost(String uid, String title, String content) async {
     }
   }
 
-  // Function to retrieve user posts
+  // retrieve user posts
   Future<List<Map<String, dynamic>>> getUserPosts(String uid) async {
     try {
       QuerySnapshot querySnapshot = await _firestore.collection('users').doc(uid).collection('posts').orderBy('timestamp', descending: true).get();
@@ -63,7 +63,7 @@ Future<void> addPost(String uid, String title, String content) async {
     }
   }
 
-  // Function to update a post
+  // update a post
   Future<void> updatePost(String uid, String postId, String title, String content) async {
     try {
       await _firestore.collection('users').doc(uid).collection('posts').doc(postId).update({
@@ -77,7 +77,7 @@ Future<void> addPost(String uid, String title, String content) async {
     }
   }
 
-  // Function to delete a post
+  // delete a post
   Future<void> deletePost(String uid, String postId) async {
     try {
       await _firestore.collection('users').doc(uid).collection('posts').doc(postId).delete();
