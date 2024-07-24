@@ -2,16 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class PostsPage extends StatelessWidget {
-  final List<Map<String, String>> posts;
+  final List<Map<String, dynamic>> posts;
   final int initialIndex;
+  final String name;
 
-  PostsPage({required this.posts, required this.initialIndex});
+  PostsPage({
+    required this.posts,
+    required this.initialIndex,
+    required this.name,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('your_username'),
+        title: Text(name),
       ),
       body: ListView.builder(
         itemCount: posts.length,
@@ -22,27 +27,29 @@ class PostsPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildPostHeader(post['imageUrl']!),
-                SizedBox(height: 8.0), 
+                _buildPostHeader(post['profileImageUrl'] ?? ''),
+                SizedBox(height: 4.0), 
                 AspectRatio(
-                  aspectRatio: 1.0, 
+                  aspectRatio: 1.0,
                   child: CachedNetworkImage(
-                    imageUrl: post['imageUrl']!,
+                    imageUrl: post['imageUrl'] ?? '',
                     fit: BoxFit.cover,
+                    placeholder: (context, url) => CircularProgressIndicator(),
+                    errorWidget: (context, url, error) => Icon(Icons.error),
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0), 
                   child: Text(
-                    post['title']!,
+                    post['title'] ?? '',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(post['description']!),
+                  padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0), 
+                  child: Text(post['description'] ?? ''),
                 ),
-                SizedBox(height: 16.0), // space at the end of each post
+                SizedBox(height: 8.0), 
               ],
             ),
           );
@@ -53,7 +60,7 @@ class PostsPage extends StatelessWidget {
 
   Widget _buildPostHeader(String profileImageUrl) {
     return Container(
-      color: Colors.grey[200], // header color, change later
+      color: Colors.grey[200], 
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Row(
         children: [
@@ -63,7 +70,7 @@ class PostsPage extends StatelessWidget {
           ),
           SizedBox(width: 8),
           Text(
-            'Your Name',
+            name, 
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
         ],
@@ -71,4 +78,3 @@ class PostsPage extends StatelessWidget {
     );
   }
 }
-
