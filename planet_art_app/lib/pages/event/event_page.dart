@@ -15,6 +15,8 @@ class EventPage extends StatefulWidget {
 class _EventPageState extends State<EventPage> {
   final _textController = TextEditingController();
 
+  bool _showUpcoming = true;
+
   // Control sessions
   var uuid = const Uuid();
 
@@ -169,7 +171,11 @@ class _EventPageState extends State<EventPage> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 TextButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    setState(() {
+                      _showUpcoming = true;
+                    });
+                  },
                   child: const Text(
                     'Upcoming',
                     style: TextStyle(
@@ -180,7 +186,11 @@ class _EventPageState extends State<EventPage> {
                   ),
                 ),
                 TextButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    setState(() {
+                      _showUpcoming = false;
+                    });
+                  },
                   child: const Text(
                     'Calendar',
                     style: TextStyle(
@@ -194,101 +204,106 @@ class _EventPageState extends State<EventPage> {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              itemCount: _photoUrlsWithNames.length, // Use actual data length
-              itemBuilder: (context, index) {
-                var item = _photoUrlsWithNames[index];
-                var imageUrl = item['url'];
-                var name = item['name'];
+            child: _showUpcoming ? _buildUpcomingView() : _buildCalendarView(),
+          ),
+        ],
+      ),
+    );
+  }
 
-                return Card(
-                  margin:
-                      const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-                  child: Container(
-                    height: 400.0, // Set the desired fixed height here
+  ListView _buildUpcomingView() {
+    return ListView.builder(
+      itemCount: _photoUrlsWithNames.length,
+      itemBuilder: (context, index) {
+        var item = _photoUrlsWithNames[index];
+        var imageUrl = item['url'];
+        var name = item['name'];
+
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+          child: Container(
+            height: 400.0, // Set the desired fixed height here
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Image.network(
+                  imageUrl ?? 'https://via.placeholder.com/400x200',
+                  fit: BoxFit.cover,
+                  height: 250.0, // Adjust this height according to your layout
+                  width: double.infinity,
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Image.network(
-                          imageUrl ?? 'https://via.placeholder.com/400x200',
-                          fit: BoxFit.cover,
-                          height:
-                              250.0, // Adjust this height according to your layout
-                          width: double.infinity,
+                        Text(
+                          name ?? 'Art Exhibition',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        const SizedBox(height: 10),
+                        const Expanded(
+                          child: Text(
+                            'Lorem ipsum dolor sit amet, consectetur adipiscing elit...',
+                            style: TextStyle(fontSize: 14),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2, // Limit number of lines
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
                               children: [
-                                Text(
-                                  name ?? 'Art Exhibition',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 10),
-                                const Expanded(
-                                  child: Text(
-                                    'Lorem ipsum dolor sit amet, consectetur adipiscing elit...',
-                                    style: TextStyle(fontSize: 14),
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 2, // Limit number of lines
+                                CircleAvatar(
+                                  backgroundImage: NetworkImage(
+                                    'https://via.placeholder.com/50',
                                   ),
                                 ),
-                                const SizedBox(height: 10),
-                                const Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                                SizedBox(width: 10),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
-                                      children: [
-                                        CircleAvatar(
-                                          backgroundImage: NetworkImage(
-                                            'https://via.placeholder.com/50',
-                                          ),
-                                        ),
-                                        SizedBox(width: 10),
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text('Name Here',
-                                                style: TextStyle(fontSize: 14)),
-                                            Text('Occupation Here',
-                                                style: TextStyle(fontSize: 12)),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        Text('Exhibition Center A',
-                                            style: TextStyle(fontSize: 12)),
-                                        Text('June 8, 6 PM',
-                                            style: TextStyle(fontSize: 12)),
-                                      ],
-                                    ),
+                                    Text('Name Here',
+                                        style: TextStyle(fontSize: 14)),
+                                    Text('Occupation Here',
+                                        style: TextStyle(fontSize: 12)),
                                   ],
                                 ),
                               ],
                             ),
-                          ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text('Exhibition Center A',
+                                    style: TextStyle(fontSize: 12)),
+                                Text('June 8, 6 PM',
+                                    style: TextStyle(fontSize: 12)),
+                              ],
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                );
-              },
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCalendarView() {
+    return const Center(
+      child: Text('Calendar View'),
     );
   }
 }
