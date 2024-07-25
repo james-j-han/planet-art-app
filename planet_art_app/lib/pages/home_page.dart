@@ -23,7 +23,6 @@ class _HomePageState extends State<HomePage> {
     await Auth().signOut();
   }
 
- 
   Widget _userUid() {
     return Text(user?.email ?? 'User email');
   }
@@ -57,7 +56,7 @@ class _HomePageState extends State<HomePage> {
       child: const ExplorePage(),
     ),
     Center(
-      child: const EventPage(),
+      child: EventPage(),
     ),
     Center(
       child: const MessagePage(),
@@ -70,7 +69,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,
