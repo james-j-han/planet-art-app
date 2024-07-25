@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:planet_art_app/pages/explore/explore_detail_page.dart';
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
 
@@ -176,38 +177,49 @@ class _ExplorePageState extends State<ExplorePage> {
                   GridView.builder(
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
+                      crossAxisCount: 3,
                       crossAxisSpacing: 4.0,
                       mainAxisSpacing: 4.0,
                     ),
                     itemCount: _photoUrlsWithNames.length,
                     itemBuilder: (context, index) {
                       var item = _photoUrlsWithNames[index];
-                      return Stack(
-                        children: [
-                          Image.network(
-                            item['url']!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            child: Container(
-                              color: Colors.black54,
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(
-                                item['name']!,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => ExploreDetailPage(
+                                        name: item['name']!,
+                                        imageUrl: item['url']!,
+                                      )));
+                        },
+                        child: Stack(
+                          children: [
+                            Image.network(
+                              item['url']!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
                             ),
-                          ),
-                        ],
+                            // Positioned(
+                            //   bottom: 0,
+                            //   left: 0,
+                            //   right: 0,
+                            //   child: Container(
+                            //     color: Colors.black54,
+                            //     padding: const EdgeInsets.all(8.0),
+                            //     child: Text(
+                            //       item['name']!,
+                            //       style: const TextStyle(
+                            //         color: Colors.white,
+                            //         fontSize: 16,
+                            //         fontWeight: FontWeight.bold,
+                            //       ),
+                            //     ),
+                            //   ),
+                            // ),
+                          ],
+                        ),
                       );
                     },
                   ),
