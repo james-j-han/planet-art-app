@@ -32,7 +32,8 @@ class _EventPageState extends State<EventPage> {
 
   List<dynamic> _places = [];
 
-  List<Map<String, String>> _photoUrlsWithNames = [];
+  // List<Map<String, String>> _photoUrlsWithNames = [];
+  List<Map<String, dynamic>> _photoUrlsWithNames = [];
 
   @override
   void initState() {
@@ -182,6 +183,8 @@ class _EventPageState extends State<EventPage> {
       if (response.statusCode == 200) {
         var placeDetails = data['result'];
         var photos = placeDetails['photos'] ?? [];
+        var formattedAddress = placeDetails['formatted_address'];
+        var openingHours = placeDetails['opening_hours']?['weekday_text'] ?? [];
 
         _photoUrlsWithNames.clear();
         for (var photo in photos) {
@@ -189,7 +192,12 @@ class _EventPageState extends State<EventPage> {
           if (photoReference != null) {
             var photoUrl = await getPlacePhoto(photoReference);
             if (photoUrl != null) {
-              _photoUrlsWithNames.add({'url': photoUrl, 'name': placeName});
+              _photoUrlsWithNames.add({
+                'url': photoUrl,
+                'name': placeName,
+                'address': formattedAddress,
+                'opening_hours': openingHours, // Ensure this is a List<String>
+              });
             }
           }
         }
@@ -313,6 +321,8 @@ class _EventPageState extends State<EventPage> {
         var item = _photoUrlsWithNames[index];
         var imageUrl = item['url'];
         var name = item['name'];
+        var address = item['address'];
+        var openingHours = item['opening_hours'] ?? [];
 
         return GestureDetector(
           onTap: () {
@@ -372,64 +382,27 @@ class _EventPageState extends State<EventPage> {
                           ),
                         ),
                         const SizedBox(height: 5),
-                        const Text(
-                          'Lorem ipsum dolor sit amet, consectetur adipiscing elit...',
-                          style: TextStyle(color: Colors.white),
+                        Text(
+                          address ?? 'No address available',
+                          style: const TextStyle(color: Colors.white),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
-                  const Positioned(
+                  Positioned(
                     bottom: 10,
                     left: 10,
                     right: 10,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(height: 10),
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              backgroundImage: NetworkImage(
-                                'https://via.placeholder.com/50',
-                              ),
-                            ),
-                            SizedBox(width: 10),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Name Here',
-                                  style: TextStyle(
-                                      fontSize: 14, color: Colors.white),
-                                ),
-                                Text(
-                                  'Occupation Here',
-                                  style: TextStyle(
-                                      fontSize: 12, color: Colors.white),
-                                ),
-                              ],
-                            ),
-                            Spacer(),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  'Exhibition Center A',
-                                  style: TextStyle(
-                                      fontSize: 12, color: Colors.white),
-                                ),
-                                Text(
-                                  'June 8, 6 PM',
-                                  style: TextStyle(
-                                      fontSize: 12, color: Colors.white),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                        for (var hours in openingHours)
+                          Text(
+                            hours,
+                            style: const TextStyle(color: Colors.white),
+                          ),
                       ],
                     ),
                   ),

@@ -78,12 +78,41 @@ class EventDetailPage extends StatelessWidget {
                 'Location',
                 style: TextStyle(fontSize: 16, color: Colors.grey[300]),
               ),
-              subtitle: const Text(
-                'Exhibition A',
-                style: TextStyle(
+              subtitle: Text(
+                item['address'] ?? 'Exhibition A',
+                style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: Colors.white),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.access_time_filled_rounded,
+                color: Colors.white,
+              ),
+              title: Text(
+                'When',
+                style: TextStyle(fontSize: 16, color: Colors.grey[300]),
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Exhibition A', // This could be replaced with the actual event name
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  for (var hour in item['opening_hours'] ?? [])
+                    Text(
+                      hour,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                ],
               ),
             )
           ],

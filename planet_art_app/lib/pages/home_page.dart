@@ -53,17 +53,16 @@ class _HomePageState extends State<HomePage> {
 
   final List<Widget> _pages = [
     Center(
-      child:  ExplorePage(),
+      child: ExplorePage(),
     ),
     Center(
       child: EventPage(),
     ),
     Center(
-      child: const MessagePage(),
+      child: MessagePage(),
     ),
     Center(
       child: AccountPage(),
-      
     ),
   ];
 
