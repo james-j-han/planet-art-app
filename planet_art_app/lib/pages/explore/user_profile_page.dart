@@ -5,7 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../account/connections_page.dart';
 import '../account/posts.dart'; // Ensure PostsPage is imported
-import '../../auth.dart'; 
+import 'package:planet_art_app/auth.dart'; // Import your Auth file here
 import '../account/user_service.dart'; // Ensure UserService is imported
 
 class UserProfilePage extends StatefulWidget {
@@ -139,12 +139,36 @@ class _UserProfilePageState extends State<UserProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color.fromARGB(255, 53, 48, 115), // Background color
       appBar: AppBar(
-        title: Text(name),
+        backgroundColor: Color.fromARGB(255, 40, 35, 88), // AppBar background color
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white), // Back icon color
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: Text(
+          name,
+          style: TextStyle(color: Colors.white), // Text color
+        ),
         actions: [
+          IconButton(
+            icon: Icon(Icons.chat, color: Colors.white), // Chat icon color
+            onPressed: () {
+              // Handle chat button press
+              // Navigate to chat screen or perform chat action
+            },
+          ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.5), // 50% opacity
+            ),
             onPressed: _toggleConnectionStatus,
-            child: Text(isConnected ? 'Remove Connection' : 'Add Connection'),
+            child: Text(
+              isConnected ? 'Remove Connection' : 'Add Connection',
+              style: TextStyle(color: Colors.white), // Text color
+            ),
           ),
           SizedBox(width: 8), // Add some spacing between buttons
         ],
@@ -179,18 +203,28 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   children: [
                     Text(
                       name,
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Colors.white, // Text color
+                      ),
                     ),
                     SizedBox(width: 8),
                     Text(
                       pronouns,
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white, // Text color
+                      ),
                     ),
                   ],
                 ),
                 Text(
                   occupation,
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white, // Text color
+                  ),
                 ),
               ],
             ),
@@ -209,6 +243,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
           Text(
             bio,
             textAlign: TextAlign.start,
+            style: TextStyle(color: Colors.white), // Text color
           ),
           SizedBox(height: 16),
           Row(
@@ -228,6 +263,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 ),
               Spacer(), // Pushes the connections button to the right
               ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.5), // 50% opacity
+                ),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -238,6 +276,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 },
                 child: Text(
                   '$connections Connections',
+                  style: TextStyle(color: Colors.white), // Text color
                 ),
               ),
             ],
@@ -247,7 +286,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
-  Widget _buildPostsGrid() {
+   Widget _buildPostsGrid() {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
           .collection('users')
@@ -258,9 +297,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return Center(child: Text('Error: ${snapshot.error}', style: TextStyle(color: Colors.white))); // Text color
         } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(child: Text('No posts found'));
+          return Center(child: Text('No posts found', style: TextStyle(color: Colors.white))); // Text color
         } else {
           final posts = snapshot.data!.docs.map((doc) {
             var data = doc.data();
@@ -271,11 +310,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
               'imageUrl': data['imageUrl'] ?? '',
             };
           }).toList();
-
-          return GridView.builder(
+           return GridView.builder(
             padding: EdgeInsets.all(16.0),
             shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
+            physics: NeverScrollableScrollPhysics(), // Disable scrolling for nested scroll view
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               crossAxisSpacing: 4.0,
@@ -285,11 +323,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
             itemBuilder: (context, index) {
               final post = posts[index];
               return GestureDetector(
-                onTap: () => _viewPost(post), // Use _viewPost to handle post selection
+                onTap: () => _viewPost(post),
                 child: CachedNetworkImage(
                   imageUrl: post['imageUrl'],
                   placeholder: (context, url) => CircularProgressIndicator(),
-                  errorWidget: (context, url, error) => Icon(Icons.error),
+                  errorWidget: (context, url, error) => Icon(Icons.error, color: Colors.white),
                   fit: BoxFit.cover,
                 ),
               );

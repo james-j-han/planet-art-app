@@ -53,7 +53,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     if (user != null) {
       UserService userService = UserService();
 
-      // save the profile data
+      // Save the profile data
       await userService.saveUserProfile(
         name: _nameController.text,
         occupation: _occupationController.text,
@@ -63,13 +63,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
         portfolioLink: _portfolioLinkController.text,
       );
 
-      // get and display the updated profile data
+      // Get and display the updated profile data
       Map<String, dynamic>? updatedUserData = await userService.getUserProfile(user.uid); // Pass uid to getUserProfile
       
       if (updatedUserData != null) {
-        Navigator.pop(context, updatedUserData); // pass updated data back
+        Navigator.pop(context, updatedUserData); // Pass updated data back
       } else {
-        Navigator.pop(context, null); // pass null if data retrieval failed
+        Navigator.pop(context, null); // Pass null if data retrieval failed
       }
     }
   }
@@ -84,16 +84,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: Icon(Icons.image),
-                title: Text('Upload Image'),
+                leading: Icon(Icons.image, color: Colors.white),
+                title: Text('Upload Image', style: TextStyle(color: Colors.white)),
                 onTap: () async {
                   Navigator.pop(context);
                   await _uploadImage();
                 },
               ),
               ListTile(
-                leading: Icon(Icons.link),
-                title: Text('Enter Image URL'),
+                leading: Icon(Icons.link, color: Colors.white),
+                title: Text('Enter Image URL', style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.pop(context);
                   setState(() {
@@ -149,7 +149,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       return downloadUrl;
     } catch (e) {
       print('Error uploading image: $e');
-      throw e; // handle the error in _uploadImage
+      throw e; // Handle the error in _uploadImage
     }
   }
 
@@ -159,7 +159,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       setState(() {
         profileImageUrl = url;
       });
-      // update  Firestore with the new profile image URL
+      // Update Firestore with the new profile image URL
       UserService userService = UserService();
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
@@ -171,8 +171,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color.fromARGB(255, 53, 48, 115), // Background color
       appBar: AppBar(
         title: Text('Edit Profile'),
+        backgroundColor: Color.fromARGB(255, 33, 30, 80), // Darker AppBar color
+        titleTextStyle: TextStyle(
+          color: Colors.white, // White text color
+          fontSize: 20, // Adjust text size as needed
+        ),
+        iconTheme: IconThemeData(
+          color: Colors.white, // White color for back button
+        ),
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16.0),
@@ -182,12 +191,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
               onTap: _changeProfileImage,
               child: CircleAvatar(
                 radius: 50,
-                backgroundImage: NetworkImage(profileImageUrl),
-                child: Icon(
-                  Icons.camera_alt,
-                  size: 30,
-                  color: Colors.white.withOpacity(0.8),
-                ),
+                backgroundImage: profileImageUrl.isNotEmpty ? NetworkImage(profileImageUrl) : null,
+                backgroundColor: Colors.grey[200],
+                child: profileImageUrl.isEmpty
+                    ? Icon(
+                        Icons.camera_alt,
+                        size: 30,
+                        color: Colors.white.withOpacity(0.8),
+                      )
+                    : null,
               ),
             ),
             SizedBox(height: 16),
@@ -215,8 +227,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
       child: TextField(
         controller: controller,
         maxLines: maxLines,
+        style: TextStyle(color: Colors.white), // Text color
         decoration: InputDecoration(
-          hintText: hintText, 
+          filled: true,
+          fillColor: Colors.white.withOpacity(0.2), // Translucent white background
+          hintText: hintText,
+          hintStyle: TextStyle(color: Colors.white70), // Hint text color
           border: OutlineInputBorder(),
           contentPadding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0), // Add padding for better appearance
         ),

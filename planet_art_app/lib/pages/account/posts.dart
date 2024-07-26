@@ -27,11 +27,13 @@ class _PostsPageState extends State<PostsPage> {
   final double _itemHeight = 600; // Default item height
   bool _isScrollInitialized = false;
   String? _postToDeleteId; // Track the postId for deletion
+  String? _profileImageUrl; // To store the profile image URL
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
+    _fetchProfileImageUrl();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_isScrollInitialized) {
@@ -45,6 +47,18 @@ class _PostsPageState extends State<PostsPage> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _fetchProfileImageUrl() async {
+    try {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(widget.uid).get();
+      final data = userDoc.data();
+      setState(() {
+        _profileImageUrl = data?['profileImageUrl'];
+      });
+    } catch (e) {
+      print('Error fetching profile image URL: ${e.toString()}');
+    }
   }
 
   void _scrollToInitialIndex(int index) {
@@ -149,7 +163,10 @@ class _PostsPageState extends State<PostsPage> {
               onPressed: _showDeleteConfirmationDialog,
             ),
         ],
+        backgroundColor: Color.fromARGB(255, 53, 48, 115), // AppBar background color
+        iconTheme: IconThemeData(color: Colors.white), // Set icon color to white
       ),
+      backgroundColor: Color.fromARGB(255, 53, 48, 115), // Background color of the Scaffold
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('users')
@@ -160,9 +177,9 @@ class _PostsPageState extends State<PostsPage> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(child: Text('Error: ${snapshot.error}', style: TextStyle(color: Colors.white)));
           } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: Text('No posts found'));
+            return Center(child: Text('No posts found', style: TextStyle(color: Colors.white)));
           } else {
             final posts = snapshot.data!.docs.map((doc) {
               var data = doc.data() as Map<String, dynamic>;
@@ -171,7 +188,6 @@ class _PostsPageState extends State<PostsPage> {
                 'title': data['title'] ?? '',
                 'description': data['description'] ?? '',
                 'imageUrl': data['imageUrl'] ?? '',
-                'profileImageUrl': data['profileImageUrl'] ?? '',
               };
             }).toList();
 
@@ -189,7 +205,7 @@ class _PostsPageState extends State<PostsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildPostHeader(post['profileImageUrl'] ?? '', postId),
+                      _buildPostHeader(postId),
                       SizedBox(height: 4.0),
                       AspectRatio(
                         aspectRatio: 1.0,
@@ -210,12 +226,12 @@ class _PostsPageState extends State<PostsPage> {
                         padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
                         child: Text(
                           post['title'] ?? '',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.white),
                         ),
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-                        child: Text(post['description'] ?? ''),
+                        child: Text(post['description'] ?? '', style: TextStyle(color: Colors.white)),
                       ),
                       SizedBox(height: 8.0),
                     ],
@@ -229,9 +245,9 @@ class _PostsPageState extends State<PostsPage> {
     );
   }
 
-  Widget _buildPostHeader(String profileImageUrl, String postId) {
+  Widget _buildPostHeader(String postId) {
     return Container(
-      color: Colors.grey[200],
+      color: Color.fromARGB(255, 40, 35, 88), // Darker purple for the post header
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -240,16 +256,18 @@ class _PostsPageState extends State<PostsPage> {
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundImage: CachedNetworkImageProvider(profileImageUrl),
+                backgroundImage: _profileImageUrl != null
+                    ? CachedNetworkImageProvider(_profileImageUrl!)
+                    : AssetImage('assets/default_profile.png') as ImageProvider, // Default image if URL is null
+                backgroundColor: Colors.transparent, // Ensure profile images are visible
               ),
               SizedBox(width: 8),
               Text(
                 widget.name,
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white), // Ensure text is visible
               ),
             ],
           ),
-          // Removed delete button from here
         ],
       ),
     );
