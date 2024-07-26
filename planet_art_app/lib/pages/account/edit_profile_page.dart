@@ -29,42 +29,48 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   void _getUserProfile() async {
-    UserService userService = UserService();
-    Map<String, dynamic>? userData = await userService.getUserProfile();
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      UserService userService = UserService();
+      Map<String, dynamic>? userData = await userService.getUserProfile(user.uid); // Pass uid to getUserProfile
 
-    if (userData != null) {
-      setState(() {
-        _nameController.text = userData['name'] ?? '';
-        _occupationController.text = userData['occupation'] ?? '';
-        _pronounsController.text = userData['pronouns'] ?? '';
-        _bioController.text = userData['bio'] ?? '';
-        _portfolioLinkController.text = userData['portfolioLink'] ?? '';
-
-        profileImageUrl = userData['profileImageUrl'] ?? '';
-      });
+      if (userData != null) {
+        setState(() {
+          _nameController.text = userData['name'] ?? '';
+          _occupationController.text = userData['occupation'] ?? '';
+          _pronounsController.text = userData['pronouns'] ?? '';
+          _bioController.text = userData['bio'] ?? '';
+          _portfolioLinkController.text = userData['portfolioLink'] ?? '';
+          
+          profileImageUrl = userData['profileImageUrl'] ?? '';
+        });
+      }
     }
   }
 
   void _saveProfile() async {
-    UserService userService = UserService();
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      UserService userService = UserService();
 
-    // save the profile data
-    await userService.saveUserProfile(
-      name: _nameController.text,
-      occupation: _occupationController.text,
-      bio: _bioController.text,
-      profileImageUrl: profileImageUrl,
-      pronouns: _pronounsController.text,
-      portfolioLink: _portfolioLinkController.text,
-    );
+      // save the profile data
+      await userService.saveUserProfile(
+        name: _nameController.text,
+        occupation: _occupationController.text,
+        bio: _bioController.text,
+        profileImageUrl: profileImageUrl,
+        pronouns: _pronounsController.text,
+        portfolioLink: _portfolioLinkController.text,
+      );
 
-    // get and display the updated profile data
-    Map<String, dynamic>? updatedUserData = await userService.getUserProfile();
-    
-    if (updatedUserData != null) {
-      Navigator.pop(context, updatedUserData); // pass updated data back
-    } else {
-      Navigator.pop(context, null); // pass null if data retrieval failed
+      // get and display the updated profile data
+      Map<String, dynamic>? updatedUserData = await userService.getUserProfile(user.uid); // Pass uid to getUserProfile
+      
+      if (updatedUserData != null) {
+        Navigator.pop(context, updatedUserData); // pass updated data back
+      } else {
+        Navigator.pop(context, null); // pass null if data retrieval failed
+      }
     }
   }
 
@@ -115,7 +121,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
         });
         // Update Firestore with the new profile image URL
         UserService userService = UserService();
-        await userService.updateUserProfileField('profileImageUrl', profileImageUrl);
+        User? user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await userService.updateUserProfileField('profileImageUrl', profileImageUrl);
+        }
       } catch (e) {
         print('Error uploading image: $e');
       }
@@ -152,7 +161,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
       });
       // update  Firestore with the new profile image URL
       UserService userService = UserService();
-      await userService.updateUserProfileField('profileImageUrl', profileImageUrl);
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await userService.updateUserProfileField('profileImageUrl', profileImageUrl);
+      }
     }
   }
 

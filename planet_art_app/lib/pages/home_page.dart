@@ -53,7 +53,7 @@ class _HomePageState extends State<HomePage> {
 
   final List<Widget> _pages = [
     Center(
-      child: const ExplorePage(),
+      child:  ExplorePage(),
     ),
     Center(
       child: EventPage(),
@@ -63,6 +63,7 @@ class _HomePageState extends State<HomePage> {
     ),
     Center(
       child: AccountPage(),
+      
     ),
   ];
 
