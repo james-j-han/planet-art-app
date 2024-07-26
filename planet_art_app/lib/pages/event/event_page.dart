@@ -1,7 +1,11 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:planet_art_app/pages/event/event_detail_page.dart';
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
 
@@ -44,32 +48,122 @@ class _EventPageState extends State<EventPage> {
 
   void _onTextChanged() {}
 
+  // void getSuggestion() async {
+  //   try {
+  //     String baseURL =
+  //         'https://maps.googleapis.com/maps/api/place/autocomplete/json';
+  //     String request =
+  //         '$baseURL?input=Art%20Exhibition&key=$PLACES_API_KEY&sessiontoken=$_sessionToken';
+  //     var response = await http.get(Uri.parse(request));
+  //     var data = json.decode(response.body);
+
+  //     if (kDebugMode) {
+  //       print('mydata');
+  //       print(data);
+  //     }
+
+  //     if (response.statusCode == 200) {
+  //       setState(() {
+  //         _places = data['predictions'];
+  //       });
+
+  //       if (_places.isNotEmpty) {
+  //         var firstPlace = _places.first;
+  //         await getPlaceDetails(
+  //             firstPlace['place_id'], firstPlace['description']);
+  //       }
+  //     } else {
+  //       throw Exception('Failed to load predictions');
+  //     }
+  //   } catch (e) {
+  //     print(e);
+  //   }
+  // }
+
+  Future<void> _requestLocationPermission() async {
+    var status = await Permission.location.status;
+    if (!status.isGranted) {
+      status = await Permission.location.request();
+      if (!status.isGranted) {
+        // Handle the case where the user denies permission
+        print('Location permission denied');
+        return;
+      }
+    }
+  }
+
+  Future<Position?> _getCurrentLocation() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+      return position;
+    } catch (e) {
+      print('Error getting location: $e');
+      return null;
+    }
+  }
+
   void getSuggestion() async {
     try {
+      // Request location permission
+      await _requestLocationPermission();
+
+      // Get current location
+      Position? position = await _getCurrentLocation();
+
+      if (position == null) {
+        print('Could not get current location');
+        return;
+      }
+
+      // Extract latitude and longitude
+      String location = '${position.latitude},${position.longitude}';
+      String radius = '5000'; // 20 km radius
+      String type = 'art_gallery'; // Search for art galleries
       String baseURL =
-          'https://maps.googleapis.com/maps/api/place/autocomplete/json';
+          'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
       String request =
-          '$baseURL?input=Museum%20Art&key=$PLACES_API_KEY&sessiontoken=$_sessionToken';
-      var response = await http.get(Uri.parse(request));
-      var data = json.decode(response.body);
+          '$baseURL?location=$location&radius=$radius&type=$type&key=$PLACES_API_KEY';
 
-      // if (kDebugMode) {
-      //   print('mydata');
-      //   print(data);
-      // }
+      List<dynamic> allPlaces = [];
+      String? nextPageToken;
 
-      if (response.statusCode == 200) {
-        setState(() {
-          _places = data['predictions'];
-        });
+      while (true) {
+        // Make the API request
+        var response = await http.get(Uri.parse(nextPageToken ?? request));
+        var data = json.decode(response.body);
 
-        if (_places.isNotEmpty) {
-          var firstPlace = _places.first;
-          await getPlaceDetails(
-              firstPlace['place_id'], firstPlace['description']);
+        if (kDebugMode) {
+          print('mydata');
+          print(data);
         }
-      } else {
-        throw Exception('Failed to load predictions');
+
+        if (response.statusCode == 200) {
+          // Add results to the list
+          allPlaces.addAll(data['results'] ?? []);
+
+          // Check for next page token
+          nextPageToken = data['next_page_token'];
+
+          // If there is no next page token, break the loop
+          if (nextPageToken == null) {
+            break;
+          }
+
+          // Wait for a short period before making the next request
+          await Future.delayed(const Duration(seconds: 2));
+        } else {
+          throw Exception('Failed to load predictions');
+        }
+      }
+
+      setState(() {
+        _places = allPlaces;
+      });
+
+      if (_places.isNotEmpty) {
+        var firstPlace = _places.first;
+        await getPlaceDetails(firstPlace['place_id'], firstPlace['name']);
       }
     } catch (e) {
       print(e);
@@ -219,72 +313,118 @@ class _EventPageState extends State<EventPage> {
         var imageUrl = item['url'];
         var name = item['name'];
 
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-          child: Container(
-            height: 400.0, // Set the desired fixed height here
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Image.network(
-                  imageUrl ?? 'https://via.placeholder.com/400x200',
-                  fit: BoxFit.cover,
-                  height: 250.0, // Adjust this height according to your layout
-                  width: double.infinity,
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => EventDetailPage(
+                        item: item,
+                      )),
+            );
+          },
+          child: Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20.0), // Rounded corners
+            ),
+            margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+            child: ClipRRect(
+              borderRadius:
+                  BorderRadius.circular(20.0), // Match the card corners
+              child: Stack(
+                children: [
+                  Image.network(
+                    imageUrl ?? 'https://via.placeholder.com/400x200',
+                    fit: BoxFit.cover,
+                    height: 250.0,
+                    width: double.infinity,
+                  ),
+                  // Gradient overlay for text contrast
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.black.withOpacity(0.6),
+                            Colors.transparent,
+                          ],
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          stops: const [0.0, 0.7],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Title at the top
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    right: 10,
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           name ?? 'Art Exhibition',
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
+                        ),
+                        const SizedBox(height: 5),
+                        const Text(
+                          'Lorem ipsum dolor sit amet, consectetur adipiscing elit...',
+                          style: TextStyle(color: Colors.white),
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 10),
-                        const Expanded(
-                          child: Text(
-                            'Lorem ipsum dolor sit amet, consectetur adipiscing elit...',
-                            style: TextStyle(fontSize: 14),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 2, // Limit number of lines
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      ],
+                    ),
+                  ),
+                  const Positioned(
+                    bottom: 10,
+                    left: 10,
+                    right: 10,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 10),
+                        Row(
                           children: [
-                            Row(
+                            CircleAvatar(
+                              backgroundImage: NetworkImage(
+                                'https://via.placeholder.com/50',
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                CircleAvatar(
-                                  backgroundImage: NetworkImage(
-                                    'https://via.placeholder.com/50',
-                                  ),
+                                Text(
+                                  'Name Here',
+                                  style: TextStyle(
+                                      fontSize: 14, color: Colors.white),
                                 ),
-                                SizedBox(width: 10),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Name Here',
-                                        style: TextStyle(fontSize: 14)),
-                                    Text('Occupation Here',
-                                        style: TextStyle(fontSize: 12)),
-                                  ],
+                                Text(
+                                  'Occupation Here',
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.white),
                                 ),
                               ],
                             ),
+                            Spacer(),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text('Exhibition Center A',
-                                    style: TextStyle(fontSize: 12)),
-                                Text('June 8, 6 PM',
-                                    style: TextStyle(fontSize: 12)),
+                                Text(
+                                  'Exhibition Center A',
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.white),
+                                ),
+                                Text(
+                                  'June 8, 6 PM',
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.white),
+                                ),
                               ],
                             ),
                           ],
@@ -292,8 +432,8 @@ class _EventPageState extends State<EventPage> {
                       ],
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -302,8 +442,15 @@ class _EventPageState extends State<EventPage> {
   }
 
   Widget _buildCalendarView() {
-    return const Center(
-      child: Text('Calendar View'),
-    );
+    return ListView.builder(
+        itemCount: _photoUrlsWithNames.length,
+        itemBuilder: (context, index) {
+          var item = _photoUrlsWithNames[index];
+          // var imageUrl = item['url'];
+          var name = item['name'];
+          return const ListTile(
+            title: Text('Test'),
+          );
+        });
   }
 }
