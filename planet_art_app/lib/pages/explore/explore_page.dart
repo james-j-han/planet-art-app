@@ -1,232 +1,189 @@
-import 'dart:async';
-import 'dart:convert';
-
-import 'package:flutter/foundation.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:planet_art_app/pages/explore/explore_detail_page.dart';
-import 'package:uuid/uuid.dart';
-import 'package:http/http.dart' as http;
+import 'explore_detail_page.dart';
 
 class ExplorePage extends StatefulWidget {
-  const ExplorePage({super.key});
-
   @override
-  State<ExplorePage> createState() => _ExplorePageState();
+  _ExplorePageState createState() => _ExplorePageState();
 }
 
 class _ExplorePageState extends State<ExplorePage> {
-  final _textController = TextEditingController();
-  Timer? _debounce;
-  // Control sessions
-  var uuid = const Uuid();
-  String _sessionToken = '1234567890';
-
-  // Load API KEY from .env
-  String PLACES_API_KEY = dotenv.env['API_KEY'] ?? 'No API key found';
-
-  List<dynamic> _places = [];
-  List<Map<String, String>> _photoUrlsWithNames = [];
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  List<Map<String, dynamic>> _posts = [];
 
   @override
   void initState() {
     super.initState();
-    // _textController.addListener(_onChanged);
-    getSuggestion();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
   }
 
   @override
   void dispose() {
-    _textController.dispose();
-    if (_debounce?.isActive ?? false) _debounce?.cancel();
+    _searchController.dispose();
     super.dispose();
   }
 
-  void _onChanged() {
-    if (_debounce?.isActive ?? false) _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 2000), () {
-      if (_sessionToken == null) {
-        setState(() {
-          _sessionToken = uuid.v4();
-        });
-      }
-      // getSuggestion(_textController.text);
-    });
-  }
-
-  void getSuggestion() async {
+  Future<String> _getUserName(String uid) async {
     try {
-      String baseURL =
-          'https://maps.googleapis.com/maps/api/place/autocomplete/json';
-      String request =
-          '$baseURL?input=Museum%20Art&key=$PLACES_API_KEY&sessiontoken=$_sessionToken';
-      var response = await http.get(Uri.parse(request));
-      var data = json.decode(response.body);
-
-      if (kDebugMode) {
-        print('mydata');
-        print(data);
-      }
-
-      if (response.statusCode == 200) {
-        setState(() {
-          _places = data['predictions'];
-        });
-
-        if (_places.isNotEmpty) {
-          var firstPlace = _places.first;
-          await getPlaceDetails(
-              firstPlace['place_id'], firstPlace['description']);
-        }
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (userDoc.exists) {
+        return userDoc.data()?['name'] ?? 'Unknown';
       } else {
-        throw Exception('Failed to load predictions');
+        return 'Unknown';
       }
     } catch (e) {
-      print(e);
-    }
-  }
-
-  Future<void> getPlaceDetails(String placeID, String placeName) async {
-    try {
-      String baseURL =
-          'https://maps.googleapis.com/maps/api/place/details/json';
-      String request = '$baseURL?place_id=$placeID&key=$PLACES_API_KEY';
-      var response = await http.get(Uri.parse(request));
-      var data = json.decode(response.body);
-
-      if (response.statusCode == 200) {
-        var placeDetails = data['result'];
-        var photos = placeDetails['photos'] ?? [];
-
-        _photoUrlsWithNames.clear();
-        for (var photo in photos) {
-          var photoReference = photo['photo_reference'];
-          if (photoReference != null) {
-            var photoUrl = await getPlacePhoto(photoReference);
-            if (photoUrl != null) {
-              _photoUrlsWithNames.add({'url': photoUrl, 'name': placeName});
-            }
-          }
-        }
-
-        setState(() {});
-      } else {
-        throw Exception('Failed to load place details');
-      }
-    } catch (e) {
-      print(e);
-    }
-  }
-
-  Future<String?> getPlacePhoto(String photoReference) async {
-    try {
-      String baseURL = 'https://maps.googleapis.com/maps/api/place/photo';
-      String request =
-          '$baseURL?maxwidth=400&photoreference=$photoReference&key=$PLACES_API_KEY';
-      var response = await http.get(Uri.parse(request));
-
-      if (response.statusCode == 200) {
-        return response.request?.url.toString();
-      } else {
-        throw Exception('Failed to load photo');
-      }
-    } catch (e) {
-      print(e);
-      return null;
+      print('Error fetching user name: $e');
+      return 'Unknown';
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: const Text('Explore Page'),
-      ),
-      body: Column(
-        children: [
-          // TextField(
-          //   controller: _textController,
-          //   decoration: InputDecoration(
-          //     hintText: 'Search here',
-          //     suffixIcon: IconButton(
-          //       icon: const Icon(Icons.cancel_rounded),
-          //       onPressed: () {
-          //         _textController.clear();
-          //       },
-          //     ),
-          //   ),
-          // ),
-          Expanded(
-            child: Stack(
-              children: [
-                ListView.builder(
-                  itemCount: _places.length,
-                  itemBuilder: (context, index) {
-                    var place = _places[index];
-                    return ListTile(
-                      title: Text(place['description']),
-                      // onTap: () async {
-                      //   await getPlaceDetails(
-                      //       place['place_id'], place['description']);
-                      // },
-                    );
-                  },
-                ),
-                if (_photoUrlsWithNames.isNotEmpty)
-                  GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 4.0,
-                      mainAxisSpacing: 4.0,
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(130.0),
+        child: AppBar(
+          elevation: 0,
+          backgroundColor: Color.fromARGB(255, 53, 48, 115),
+          flexibleSpace: Column(
+            children: [
+              SizedBox(height: 40.0),
+              Container(
+                margin: EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 40.0,
+                      height: 40.0,
+                      margin: EdgeInsets.only(right: 16.0),
+                      child: CachedNetworkImage(
+                        imageUrl: 'https://firebasestorage.googleapis.com/v0/b/planet-art-app.appspot.com/o/app%2Ficons8-planet-48%20(1).png?alt=media&token=e4297794-f47d-4b68-ab82-9a39f3049ed5',
+                        placeholder: (context, url) => Center(child: CircularProgressIndicator()),
+                        errorWidget: (context, url, error) => Center(child: Icon(Icons.error)),
+                      ),
                     ),
-                    itemCount: _photoUrlsWithNames.length,
-                    itemBuilder: (context, index) {
-                      var item = _photoUrlsWithNames[index];
+                    Expanded(
+                      child: Container(
+                        height: 36.0,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(20.0),
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            prefixIcon: Icon(Icons.search),
+                            hintText: 'Search...',
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 16.0),
+              Container(
+                alignment: Alignment.centerLeft,
+                margin: EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text(
+                  'Explore Planet Art',
+                  style: TextStyle(
+                    fontSize: 29.0,
+                    color: Color.fromARGB(255, 194, 189, 251),
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              SizedBox(height: 8.0),
+            ],
+          ),
+        ),
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('explore_posts').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(child: Text('No posts found'));
+          } else {
+            // Convert snapshot data to a list of posts
+            _posts = snapshot.data!.docs.map((doc) {
+              var data = doc.data() as Map<String, dynamic>;
+              return {
+                'title': data['title'] ?? '',
+                'description': data['description'] ?? '',
+                'imageUrl': data['imageUrl'] ?? '',
+                'uid': data['uid'] ?? '',
+              };
+            }).toList();
+
+            // Filter posts based on the search query
+            var filteredPosts = _posts.where((post) {
+              final title = post['title'].toLowerCase();
+              final description = post['description'].toLowerCase();
+              return title.contains(_searchQuery) || description.contains(_searchQuery);
+            }).toList();
+
+            return GridView.builder(
+              padding: EdgeInsets.all(0.0),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 1.0,
+                mainAxisSpacing: 1.0,
+              ),
+              itemCount: filteredPosts.length,
+              itemBuilder: (context, index) {
+                var post = filteredPosts[index];
+                return FutureBuilder<String>(
+                  future: _getUserName(post['uid']),
+                  builder: (context, userSnapshot) {
+                    if (userSnapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: CircularProgressIndicator());
+                    } else if (userSnapshot.hasError) {
+                      return Center(child: Icon(Icons.error));
+                    } else {
+                      final name = userSnapshot.data ?? 'Unknown';
                       return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => ExploreDetailPage(
-                                        name: item['name']!,
-                                        imageUrl: item['url']!,
-                                      )));
-                        },
-                        child: Stack(
-                          children: [
-                            Image.network(
-                              item['url']!,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                            ),
-                            // Positioned(
-                            //   bottom: 0,
-                            //   left: 0,
-                            //   right: 0,
-                            //   child: Container(
-                            //     color: Colors.black54,
-                            //     padding: const EdgeInsets.all(8.0),
-                            //     child: Text(
-                            //       item['name']!,
-                            //       style: const TextStyle(
-                            //         color: Colors.white,
-                            //         fontSize: 16,
-                            //         fontWeight: FontWeight.bold,
-                            //       ),
-                            //     ),
-                            //   ),
-                            // ),
-                          ],
+                        onTap: () => _onPostTap(index),
+                        child: CachedNetworkImage(
+                          imageUrl: post['imageUrl'],
+                          fit: BoxFit.cover,
                         ),
                       );
-                    },
-                  ),
-              ],
-            ),
-          ),
-        ],
+                    }
+                  },
+                );
+              },
+            );
+          }
+        },
+      ),
+    );
+  }
+
+  void _onPostTap(int index) async {
+    var post = _posts[index]; // Use _posts instead of posts
+    String name = await _getUserName(post['uid']);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ExploreDetailPage(
+          posts: [post],
+          name: name, // pass the user's name
+        ),
       ),
     );
   }

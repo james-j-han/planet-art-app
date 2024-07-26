@@ -13,8 +13,15 @@ class Auth {
     required String email,
     required String password,
   }) async {
-    await _firebaseAuth.signInWithEmailAndPassword(
-        email: email, password: password);
+    print('Signing in with email: $email');
+    try {
+      await _firebaseAuth.signInWithEmailAndPassword(
+          email: email, password: password);
+      print('Sign-in successful');
+    } catch (e) {
+      print('Error signing in: $e');
+      rethrow;
+    }
   }
 
   Future<void> createUserWithEmailAndPassword({
@@ -23,70 +30,134 @@ class Auth {
     required String name,
     required String occupation,
   }) async {
-    UserCredential userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
-        email: email, password: password);
-    
-    User? user = userCredential.user;
+    print('Creating user with email: $email');
+    try {
+      UserCredential userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
+          email: email, password: password);
+      
+      User? user = userCredential.user;
 
-    if (user != null) {
-      await _firestore.collection('users').doc(user.uid).set({
-        'email': email,
-        'name': name,
-        'occupation': occupation,
-        'bio': '',
-        'profileImageUrl': '',
-        'connections': 0,
-      });
+      if (user != null) {
+        print('User created with UID: ${user.uid}');
+        await _firestore.collection('users').doc(user.uid).set({
+          'email': email,
+          'name': name,
+          'occupation': occupation,
+          'bio': '',
+          'profileImageUrl': '',
+          'connections': 0,
+        });
+        print('User data added to Firestore');
+
+        // Initialize accepted connections subcollection
+        await _firestore.collection('users').doc(user.uid).collection('connections').doc('accepted').set({
+          'accepted': [],
+        });
+        print('Connections subcollection initialized');
+      }
+    } catch (e) {
+      print('Error creating user: $e');
+      rethrow;
     }
   }
-Future<void> addPost(String uid, String title, String content) async {
+
+  Future<void> addPost(String uid, String title, String description, String postId) async {
+    print('Adding post for UID: $uid');
     try {
       await _firestore.collection('users').doc(uid).collection('posts').add({
         'title': title,
-        'content': content,
         'timestamp': FieldValue.serverTimestamp(),
+        'description': description,
+        'postId': postId,
       });
-      print("Post added successfully");
+      print('Post added successfully');
     } catch (e) {
-      print("Error adding post: $e");
+      print('Error adding post: $e');
+      rethrow;
     }
   }
 
-  // retrieve user posts
   Future<List<Map<String, dynamic>>> getUserPosts(String uid) async {
+    print('Fetching posts for UID: $uid');
     try {
       QuerySnapshot querySnapshot = await _firestore.collection('users').doc(uid).collection('posts').orderBy('timestamp', descending: true).get();
-      return querySnapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+      List<Map<String, dynamic>> posts = querySnapshot.docs.map((doc) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id; // Ensure post ID is included
+        return data;
+      }).toList();
+      print('Posts fetched: $posts');
+      return posts;
     } catch (e) {
-      print("Error fetching user posts: $e");
+      print('Error fetching user posts: $e');
       return [];
     }
   }
 
-  // update a post
-  Future<void> updatePost(String uid, String postId, String title, String content) async {
+  Future<void> updatePost(String uid, String title, String description, String postId) async {
+    print('Updating post with ID: $postId for UID: $uid');
     try {
       await _firestore.collection('users').doc(uid).collection('posts').doc(postId).update({
         'title': title,
-        'content': content,
         'timestamp': FieldValue.serverTimestamp(),
+        'description': description,
+        'postId': postId,
       });
-      print("Post updated successfully");
+      print('Post updated successfully');
     } catch (e) {
-      print("Error updating post: $e");
+      print('Error updating post: $e');
+      rethrow;
     }
   }
 
-  // delete a post
-  Future<void> deletePost(String uid, String postId) async {
+  Future<void> signOut() async {
+    print('Signing out');
     try {
-      await _firestore.collection('users').doc(uid).collection('posts').doc(postId).delete();
-      print("Post deleted successfully");
+      await _firebaseAuth.signOut();
+      print('Sign-out successful');
     } catch (e) {
-      print("Error deleting post: $e");
+      print('Error signing out: $e');
+      rethrow;
     }
   }
-  Future<void> signOut() async {
-    await _firebaseAuth.signOut();
+
+  // Methods for managing connections
+
+  Future<void> addConnection(String uid, String connectionUid) async {
+    print('Adding connection from UID: $uid to UID: $connectionUid');
+    try {
+      // Add to accepted connections for both users
+      await _firestore.collection('users').doc(uid).collection('connections').doc('accepted').update({
+        'accepted': FieldValue.arrayUnion([connectionUid])
+      });
+
+      await _firestore.collection('users').doc(connectionUid).collection('connections').doc('accepted').update({
+        'accepted': FieldValue.arrayUnion([uid])
+      });
+
+      print('Connection added successfully');
+    } catch (e) {
+      print('Error adding connection: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> removeConnection(String uid, String connectionUid) async {
+    print('Removing connection from UID: $uid to UID: $connectionUid');
+    try {
+      // Remove from accepted connections for both users
+      await _firestore.collection('users').doc(uid).collection('connections').doc('accepted').update({
+        'accepted': FieldValue.arrayRemove([connectionUid])
+      });
+
+      await _firestore.collection('users').doc(connectionUid).collection('connections').doc('accepted').update({
+        'accepted': FieldValue.arrayRemove([uid])
+      });
+
+      print('Connection removed successfully');
+    } catch (e) {
+      print('Error removing connection: $e');
+      rethrow;
+    }
   }
 }

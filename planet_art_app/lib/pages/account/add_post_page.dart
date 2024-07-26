@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -14,13 +15,12 @@ class AddPostPage extends StatefulWidget {
 class _AddPostPageState extends State<AddPostPage> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
-
   final TextEditingController _imageUrlController = TextEditingController();
   File? _imageFile;
   String? _imageUrl;
   bool _showUrlField = false;
 
-  //image picker allows file upload from device. not supported on web. 
+  // Image picker allows file upload from device. Not supported on web. 
   Future<void> _pickImage() async {
     final ImagePicker _picker = ImagePicker();
     final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
@@ -33,9 +33,10 @@ class _AddPostPageState extends State<AddPostPage> {
       });
     }
   }
-  // post submission
+
+  // Post submission
   Future<void> _submitPost() async {
-    //post fields
+    // Post fields
     final String description = _descriptionController.text;
     final String title = _titleController.text;
     final String? imageUrl = _imageUrlController.text.isNotEmpty ? _imageUrlController.text : null;
@@ -50,7 +51,8 @@ class _AddPostPageState extends State<AddPostPage> {
 
     try {
       String? postImageUrl;
-      // keeps throwing uri exception, but still works 
+
+      // Upload image to storage if selected
       if (_imageFile != null) {
         postImageUrl = await _uploadImageToStorage(_imageFile!, user.uid);
       } else if (imageUrl != null && imageUrl.isNotEmpty) {
@@ -63,10 +65,27 @@ class _AddPostPageState extends State<AddPostPage> {
         throw Exception('Failed to get a valid image URL');
       }
 
-      UserService userService = UserService();
-      await userService.addPost(user.uid, postImageUrl, description, title);
+      // Generate a new post ID
+      String postId = FirebaseFirestore.instance.collection('explore_posts').doc().id;
+      print('Generated postId: $postId'); // Debug statement
 
-      // clear the fields after submission
+      // Prepare post data
+      final postData = {
+        'description': description,
+        'title': title,
+        'timestamp': FieldValue.serverTimestamp(),
+        'uid': user.uid,
+        'imageUrl': postImageUrl,
+        'postId': postId, // Ensure postId matches document ID
+      };
+
+      // Add post to the explore_posts collection
+      await FirebaseFirestore.instance.collection('explore_posts').doc(postId).set(postData);
+
+      // Add post to the user's posts collection with postId as field value
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('posts').doc(postId).set(postData);
+
+      // Clear the fields after submission
       setState(() {
         _imageFile = null;
         _imageUrl = null;
@@ -83,7 +102,9 @@ class _AddPostPageState extends State<AddPostPage> {
       );
     }
   }
-  // adding to firebase storage. image upload -> url -> stored in firestore db under users/uid/posts
+
+
+  // Adding to Firebase Storage. Image upload -> URL -> stored in Firestore DB under users/uid/posts
   Future<String?> _uploadImageToStorage(File imageFile, String userId) async {
     try {
       final storageRef = FirebaseStorage.instance
@@ -102,19 +123,20 @@ class _AddPostPageState extends State<AddPostPage> {
       return downloadUrl;
     } catch (e) {
       print('Error uploading image: $e');
-      throw e; // error handled in submit post function
+      throw e; // Error handled in submit post function
     }
   }
-  // handling null input
+
+  // Handling null input
   String? _ensureValidUrl(String url) {
     if (url.isEmpty) {
       return null;
     }
-    //trying to fix uri error via parsing and adding http
+    // Trying to fix URI error via parsing and adding http
     try {
       Uri parsedUri = Uri.parse(url);
 
-      // check if the URI scheme is missing and add 'http://' if needed
+      // Check if the URI scheme is missing and add 'http://' if needed
       if (!parsedUri.hasScheme) {
         parsedUri = Uri.parse('http://$url');
       }
@@ -214,14 +236,12 @@ class _AddPostPageState extends State<AddPostPage> {
               ),
               SizedBox(height: 8),
               _buildTextField(_descriptionController, 'Description', maxLines: 2),
-            
             ],
           ),
         ),
       ),
     );
   }
-
 
   Widget _buildTextField(TextEditingController controller, String labelText, {int maxLines = 1}) {
     return Padding(

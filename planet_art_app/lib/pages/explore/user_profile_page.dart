@@ -1,21 +1,25 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'connections_page.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'settings_page.dart';
-import 'edit_profile_page.dart';
-import 'add_post_page.dart';
-import 'posts.dart';
-import '../../auth.dart';
+import '../account/connections_page.dart';
+import '../account/posts.dart'; // Ensure PostsPage is imported
+import '../../auth.dart'; 
+import '../account/user_service.dart'; // Ensure UserService is imported
 
-class AccountPage extends StatefulWidget {
+class UserProfilePage extends StatefulWidget {
+  final String uid;
+  final List<Map<String, dynamic>> posts;
+
+  const UserProfilePage({Key? key, required this.uid, required this.posts}) : super(key: key);
+
   @override
-  _AccountPageState createState() => _AccountPageState();
+  _UserProfilePageState createState() => _UserProfilePageState();
 }
 
-class _AccountPageState extends State<AccountPage> {
+class _UserProfilePageState extends State<UserProfilePage> {
+  
   String name = '';
   String pronouns = '';
   String occupation = '';
@@ -23,51 +27,83 @@ class _AccountPageState extends State<AccountPage> {
   String profileImageUrl = '';
   String portfolioLink = ''; 
   int connections = 0;
+  bool isConnected = false; 
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _getUserProfile();
-    _getConnectionCount();
+    _getConnectionCount(); // Fetch the number of connections
+    _checkConnectionStatus(); // Check the connection status
   }
 
   Future<void> _getUserProfile() async {
-    User? user = FirebaseAuth.instance.currentUser;
+    UserService userService = UserService();
+    Map<String, dynamic>? userData = await userService.getUserProfile(widget.uid);
 
-    if (user != null) {
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-
+    if (userData != null) {
       setState(() {
-        name = userDoc['name'] ?? 'No Name';
-        occupation = userDoc['occupation'] ?? 'No Occupation';
-        bio = userDoc['bio'] ?? 'No Bio';
-        pronouns = userDoc['pronouns'] ?? '';
-        profileImageUrl = userDoc['profileImageUrl'] ?? '';
-        portfolioLink = userDoc['portfolioLink'] ?? ''; 
+        name = userData['name'] ?? 'No Name';
+        occupation = userData['occupation'] ?? 'No Occupation';
+        bio = userData['bio'] ?? 'No Bio';
+        pronouns = userData['pronouns'] ?? '';
+        profileImageUrl = userData['profileImageUrl'] ?? '';
+        portfolioLink = userData['portfolioLink'] ?? ''; 
       });
     }
   }
 
   Future<void> _getConnectionCount() async {
+    try {
+      QuerySnapshot connectionsSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.uid)
+          .collection('connections')
+          .get();
+      setState(() {
+        connections = connectionsSnapshot.docs.length;
+      });
+    } catch (e) {
+      print('Error fetching connections count: $e');
+    }
+  }
+
+  Future<void> _checkConnectionStatus() async {
     User? user = FirebaseAuth.instance.currentUser;
 
     if (user != null) {
-      try {
-        QuerySnapshot connectionsSnapshot = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('connections')
-            .get();
+      DocumentSnapshot connectionDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('connections')
+          .doc(widget.uid)
+          .get();
 
-        setState(() {
-          connections = connectionsSnapshot.docs.length;
-        });
-      } catch (e) {
-        print('Error fetching connections count: $e');
+      setState(() {
+        isConnected = connectionDoc.exists;
+      });
+    }
+  }
+
+  void _toggleConnectionStatus() async {
+    User? user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      DocumentReference connectionDocRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('connections')
+          .doc(widget.uid);
+
+      if (isConnected) {
+        await connectionDocRef.delete();
+      } else {
+        await connectionDocRef.set({'connectedAt': FieldValue.serverTimestamp()});
       }
+
+      setState(() {
+        isConnected = !isConnected;
+      });
     }
   }
 
@@ -79,11 +115,25 @@ class _AccountPageState extends State<AccountPage> {
     }
   }
 
-  void _editProfile() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => EditProfilePage()),
-    );
+  void _viewPost(Map<String, dynamic> post) {
+    // Ensure post data is correctly passed
+    final postId = post['postId'];
+    if (postId != null && postId.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PostsPage(
+            posts: widget.posts, // Pass all posts
+            initialIndex: widget.posts.indexWhere((p) => p['postId'] == postId),
+            name: name,
+            uid: widget.uid,
+            onPostsUpdated: (updatedPosts) {}, // Handle post updates if needed
+          ),
+        ),
+      );
+    } else {
+      print('Error: Post ID is null or empty');
+    }
   }
 
   @override
@@ -91,7 +141,13 @@ class _AccountPageState extends State<AccountPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(name),
-        leading: null, // Remove the icon on the left
+        actions: [
+          ElevatedButton(
+            onPressed: _toggleConnectionStatus,
+            child: Text(isConnected ? 'Remove Connection' : 'Add Connection'),
+          ),
+          SizedBox(width: 8), // Add some spacing between buttons
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -101,18 +157,6 @@ class _AccountPageState extends State<AccountPage> {
             _buildPostsGrid(),
           ],
         ),
-      ),
-      endDrawer: _buildDrawer(context),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => AddPostPage()),
-          ).then((_) {
-            // The stream will handle updating the posts automatically
-          });
-        },
-        child: Icon(Icons.add),
       ),
     );
   }
@@ -188,7 +232,7 @@ class _AccountPageState extends State<AccountPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ConnectionsPage(uid: FirebaseAuth.instance.currentUser!.uid),
+                      builder: (context) => ConnectionsPage(uid: widget.uid), // Pass uid here
                     ),
                   );
                 },
@@ -207,7 +251,7 @@ class _AccountPageState extends State<AccountPage> {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
           .collection('users')
-          .doc(FirebaseAuth.instance.currentUser!.uid)
+          .doc(widget.uid)
           .collection('posts')
           .snapshots(),
       builder: (context, snapshot) {
@@ -241,18 +285,7 @@ class _AccountPageState extends State<AccountPage> {
             itemBuilder: (context, index) {
               final post = posts[index];
               return GestureDetector(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PostsPage(
-                      posts: posts, // Pass all posts
-                      initialIndex: index,
-                      name: name,
-                      uid: FirebaseAuth.instance.currentUser!.uid,
-                      onPostsUpdated: (updatedPosts) {}, // Handle post updates if needed
-                    ),
-                  ),
-                ),
+                onTap: () => _viewPost(post), // Use _viewPost to handle post selection
                 child: CachedNetworkImage(
                   imageUrl: post['imageUrl'],
                   placeholder: (context, url) => CircularProgressIndicator(),
@@ -265,57 +298,5 @@ class _AccountPageState extends State<AccountPage> {
         }
       },
     );
-  }
-
-  Widget _buildDrawer(BuildContext context) {
-    return Drawer(
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              children: <Widget>[
-                ListTile(
-                  title: Text('Edit Profile'),
-                  leading: Icon(Icons.edit),
-                  onTap: _editProfile,
-                ),
-                ListTile(
-                  title: Text('Settings'),
-                  leading: Icon(Icons.settings),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => SettingsPage()),
-                    );
-                  },
-                ),
-                ListTile(
-                  title: Text('Saved Events'),
-                  leading: Icon(Icons.bookmark),
-                  onTap: () {
-                    // open saved events
-                  },
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: _signOutButton(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _signOutButton() {
-    return ElevatedButton(
-      onPressed: signOut,
-      child: const Text('Sign Out'),
-    );
-  }
-
-  Future<void> signOut() async {
-    await Auth().signOut();
   }
 }
