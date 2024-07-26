@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:planet_art_app/pages/event/event_detail_page.dart';
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 class EventPage extends StatefulWidget {
   const EventPage({super.key});
@@ -442,15 +443,34 @@ class _EventPageState extends State<EventPage> {
   }
 
   Widget _buildCalendarView() {
-    return ListView.builder(
-        itemCount: _photoUrlsWithNames.length,
-        itemBuilder: (context, index) {
-          var item = _photoUrlsWithNames[index];
-          // var imageUrl = item['url'];
-          var name = item['name'];
-          return const ListTile(
-            title: Text('Test'),
-          );
-        });
+    // Get today's date
+    DateTime now = DateTime.now();
+    String formattedDate = DateFormat.yMMMMd().format(now); // Format the date
+
+    return Column(
+      children: [
+        // Display today's date
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text(
+            formattedDate,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+        ),
+        // Display the list of items
+        Expanded(
+          child: ListView.builder(
+            itemCount: _photoUrlsWithNames.length,
+            itemBuilder: (context, index) {
+              var item = _photoUrlsWithNames[index];
+              var name = item['name'];
+              return const ListTile(
+                title: Text('test'),
+              );
+            },
+          ),
+        ),
+      ],
+    );
   }
 }
