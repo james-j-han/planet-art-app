@@ -16,33 +16,10 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final User? user = Auth().currentUser;
-
   int _selectedIndex = 0;
 
   Future<void> signOut() async {
     await Auth().signOut();
-  }
-
-  Widget _userUid() {
-    return Text(user?.email ?? 'User email');
-  }
-
-  Widget _mainNavigationBar() {
-    return BottomNavigationBar(
-      items: const [
-        BottomNavigationBarItem(
-            icon: Icon(Icons.explore_rounded), label: 'Explore'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.event_rounded), label: 'Events'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.message_rounded), label: 'Messages'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.account_circle_rounded), label: 'Account'),
-      ],
-      currentIndex: _selectedIndex,
-      onTap: _onItemTapped,
-      type: BottomNavigationBarType.fixed,
-    );
   }
 
   void _onItemTapped(int index) {
@@ -73,7 +50,32 @@ class _HomePageState extends State<HomePage> {
         index: _selectedIndex,
         children: _pages,
       ),
-      bottomNavigationBar: _mainNavigationBar(),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.explore_rounded),
+            label: 'Explore',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.event_rounded),
+            label: 'Events',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.message_rounded),
+            label: 'Messages',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.account_circle_rounded),
+            label: 'Account',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Color.fromARGB(255, 53, 48, 115), // Purple background
+        selectedItemColor: Colors.white, // White color for selected items
+        unselectedItemColor: Colors.white70, // White color for unselected items with some transparency
+      ),
     );
   }
 }
