@@ -98,14 +98,14 @@ class EventDetailPage extends StatelessWidget {
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Exhibition A', // This could be replaced with the actual event name
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  // const Text(
+                  //   'Exhibition A', // This could be replaced with the actual event name
+                  //   style: TextStyle(
+                  //     fontSize: 28,
+                  //     fontWeight: FontWeight.bold,
+                  //     color: Colors.white,
+                  //   ),
+                  // ),
                   const SizedBox(height: 10),
                   for (var hour in item['opening_hours'] ?? [])
                     Text(

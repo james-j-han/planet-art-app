@@ -275,7 +275,8 @@ class _EventPageState extends State<EventPage> {
                           prefixIcon: Icon(Icons.search, color: Colors.black),
                           hintText: 'Search anything',
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16.0, vertical: 8.0),
                         ),
                         style: TextStyle(color: Colors.black),
                       ),
@@ -287,7 +288,6 @@ class _EventPageState extends State<EventPage> {
           ],
         ),
       ),
-
       body: Column(
         children: [
           // Tabs or categories
@@ -305,7 +305,9 @@ class _EventPageState extends State<EventPage> {
                   child: Text(
                     'Upcoming',
                     style: TextStyle(
-                      color: _showUpcoming ? Colors.white : Color.fromARGB(255, 194, 189, 251),
+                      color: _showUpcoming
+                          ? Colors.white
+                          : Color.fromARGB(255, 194, 189, 251),
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -320,14 +322,15 @@ class _EventPageState extends State<EventPage> {
                   child: Text(
                     'Calendar',
                     style: TextStyle(
-                      color: !_showUpcoming ? Colors.white : Color.fromARGB(255, 194, 189, 251),
+                      color: !_showUpcoming
+                          ? Colors.white
+                          : Color.fromARGB(255, 194, 189, 251),
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
               ],
-
             ),
           ),
           Expanded(
@@ -466,10 +469,16 @@ class _EventPageState extends State<EventPage> {
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: ListTile(
-            leading: const Icon(Icons.calendar_today_rounded),
+            leading: const Icon(
+              Icons.calendar_today_rounded,
+              color: Colors.white,
+            ),
             title: Text(
               formattedDate,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
             ),
           ),
         ),
@@ -512,9 +521,21 @@ class _EventPageState extends State<EventPage> {
               // Filter out places that are not open on the selected date
               if (_isOpenOnSelectedDate(openingHours)) {
                 return ListTile(
-                  leading: const Icon(Icons.location_on),
-                  title: Text(name ?? 'no name'),
-                  subtitle: const Text('Open today'),
+                  leading: const Icon(Icons.location_on, color: Colors.white),
+                  title: Text(
+                    name ?? 'no name',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  subtitle: const Text(
+                    'Open today',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => EventDetailPage(item: item)));
+                  },
                 );
               } else {
                 return Container(); // Empty container if not open
