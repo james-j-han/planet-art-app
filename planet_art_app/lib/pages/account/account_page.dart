@@ -92,6 +92,13 @@ class _AccountPageState extends State<AccountPage> {
     Navigator.pushReplacementNamed(context, '/login'); // Navigate to login screen after sign out
   }
 
+  void _navigateToAddPost() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => AddPostPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -262,7 +269,7 @@ class _AccountPageState extends State<AccountPage> {
                                   fit: BoxFit.cover,
                                 ),
                               );
-                            },
+                            }
                           );
                         }
                       },
@@ -288,13 +295,6 @@ class _AccountPageState extends State<AccountPage> {
                   ),
                   
                   ListTile(
-                    title: Text('Saved Events', style: TextStyle(color: Colors.white)),
-                    leading: Icon(Icons.bookmark, color: Colors.white),
-                    onTap: () {
-                      // open saved events page
-                    },
-                  ),
-                  ListTile(
                     title: Text('Sign Out', style: TextStyle(color: Colors.white)),
                     leading: Icon(Icons.exit_to_app, color: Colors.white),
                     onTap: _signOut,
@@ -304,6 +304,12 @@ class _AccountPageState extends State<AccountPage> {
             ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _navigateToAddPost,
+        backgroundColor: Color.fromARGB(255, 161, 139, 229),
+        foregroundColor: Colors.white,
+        child: Icon(Icons.add),
       ),
     );
   }

@@ -7,19 +7,23 @@ import '../account/connections_page.dart';
 import '../account/posts.dart'; // Ensure PostsPage is imported
 import 'package:planet_art_app/auth.dart'; // Import your Auth file here
 import '../account/user_service.dart'; // Ensure UserService is imported
+import '../message/chat_screen.dart'; // Import the ChatScreen
 
 class UserProfilePage extends StatefulWidget {
   final String uid;
-  final List<Map<String, dynamic>> posts;
+  final List<Map<String, dynamic>>? posts; // Add this parameter if needed
 
-  const UserProfilePage({Key? key, required this.uid, required this.posts}) : super(key: key);
 
+  const UserProfilePage({
+      Key? key,
+      required this.uid,
+      this.posts, // Accept the posts parameter
+    }) : super(key: key);
   @override
   _UserProfilePageState createState() => _UserProfilePageState();
 }
 
 class _UserProfilePageState extends State<UserProfilePage> {
-  
   String name = '';
   String pronouns = '';
   String occupation = '';
@@ -28,6 +32,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
   String portfolioLink = ''; 
   int connections = 0;
   bool isConnected = false; 
+  String? conversationId; // Store the conversationId for chat
+  List<Map<String, dynamic>> posts = []; // List to store user posts
 
   @override
   void didChangeDependencies() {
@@ -35,21 +41,27 @@ class _UserProfilePageState extends State<UserProfilePage> {
     _getUserProfile();
     _getConnectionCount(); // Fetch the number of connections
     _checkConnectionStatus(); // Check the connection status
+    _getConversationId(); // Get the conversation ID
+    _getUserPosts(); // Fetch posts of the user
   }
 
   Future<void> _getUserProfile() async {
-    UserService userService = UserService();
-    Map<String, dynamic>? userData = await userService.getUserProfile(widget.uid);
+    try {
+      UserService userService = UserService();
+      Map<String, dynamic>? userData = await userService.getUserProfile(widget.uid);
 
-    if (userData != null) {
-      setState(() {
-        name = userData['name'] ?? 'No Name';
-        occupation = userData['occupation'] ?? 'No Occupation';
-        bio = userData['bio'] ?? 'No Bio';
-        pronouns = userData['pronouns'] ?? '';
-        profileImageUrl = userData['profileImageUrl'] ?? '';
-        portfolioLink = userData['portfolioLink'] ?? ''; 
-      });
+      if (userData != null) {
+        setState(() {
+          name = userData['name'] ?? 'No Name';
+          occupation = userData['occupation'] ?? 'No Occupation';
+          bio = userData['bio'] ?? 'No Bio';
+          pronouns = userData['pronouns'] ?? '';
+          profileImageUrl = userData['profileImageUrl'] ?? '';
+          portfolioLink = userData['portfolioLink'] ?? ''; 
+        });
+      }
+    } catch (e) {
+      print('Error fetching user profile: $e');
     }
   }
 
@@ -69,62 +81,113 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 
   Future<void> _checkConnectionStatus() async {
-    User? user = FirebaseAuth.instance.currentUser;
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
 
-    if (user != null) {
-      DocumentSnapshot connectionDoc = await FirebaseFirestore.instance
+      if (user != null) {
+        DocumentSnapshot connectionDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('connections')
+            .doc(widget.uid)
+            .get();
+
+        setState(() {
+          isConnected = connectionDoc.exists;
+        });
+      }
+    } catch (e) {
+      print('Error checking connection status: $e');
+    }
+  }
+
+  Future<void> _getConversationId() async {
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+
+      if (user != null) {
+        QuerySnapshot conversationSnapshot = await FirebaseFirestore.instance
+            .collection('conversations')
+            .where('users', arrayContains: user.uid)
+            .where('users', arrayContains: widget.uid)
+            .get();
+
+        if (conversationSnapshot.docs.isNotEmpty) {
+          setState(() {
+            conversationId = conversationSnapshot.docs.first.id;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error fetching conversation ID: $e');
+    }
+  }
+
+  Future<void> _getUserPosts() async {
+    try {
+      QuerySnapshot postsSnapshot = await FirebaseFirestore.instance
           .collection('users')
-          .doc(user.uid)
-          .collection('connections')
           .doc(widget.uid)
+          .collection('posts')
           .get();
 
+      List<Map<String, dynamic>> fetchedPosts = postsSnapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+
       setState(() {
-        isConnected = connectionDoc.exists;
+        posts = fetchedPosts;
       });
+    } catch (e) {
+      print('Error fetching user posts: $e');
     }
   }
 
   void _toggleConnectionStatus() async {
-    User? user = FirebaseAuth.instance.currentUser;
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
 
-    if (user != null) {
-      DocumentReference connectionDocRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('connections')
-          .doc(widget.uid);
+      if (user != null) {
+        DocumentReference connectionDocRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('connections')
+            .doc(widget.uid);
 
-      if (isConnected) {
-        await connectionDocRef.delete();
-      } else {
-        await connectionDocRef.set({'connectedAt': FieldValue.serverTimestamp()});
+        if (isConnected) {
+          await connectionDocRef.delete();
+        } else {
+          await connectionDocRef.set({'connectedAt': FieldValue.serverTimestamp()});
+        }
+
+        setState(() {
+          isConnected = !isConnected;
+        });
       }
-
-      setState(() {
-        isConnected = !isConnected;
-      });
+    } catch (e) {
+      print('Error toggling connection status: $e');
     }
   }
 
   void _launchURL(String url) async {
-    if (await canLaunch(url)) {
-      await launch(url);
-    } else {
-      throw 'Could not launch $url';
+    try {
+      if (await canLaunch(url)) {
+        await launch(url);
+      } else {
+        throw 'Could not launch $url';
+      }
+    } catch (e) {
+      print('Error launching URL: $e');
     }
   }
 
   void _viewPost(Map<String, dynamic> post) {
-    // Ensure post data is correctly passed
     final postId = post['postId'];
     if (postId != null && postId.isNotEmpty) {
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => PostsPage(
-            posts: widget.posts, // Pass all posts
-            initialIndex: widget.posts.indexWhere((p) => p['postId'] == postId),
+            posts: posts,
+            initialIndex: posts.indexWhere((p) => p['postId'] == postId),
             name: name,
             uid: widget.uid,
             onPostsUpdated: (updatedPosts) {}, // Handle post updates if needed
@@ -134,6 +197,18 @@ class _UserProfilePageState extends State<UserProfilePage> {
     } else {
       print('Error: Post ID is null or empty');
     }
+  }
+
+  void _openChatScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatScreen(
+          userId: widget.uid,
+          conversationId: conversationId,
+        ),
+      ),
+    );
   }
 
   @override
@@ -155,10 +230,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         actions: [
           IconButton(
             icon: Icon(Icons.chat, color: Colors.white), // Chat icon color
-            onPressed: () {
-              // Handle chat button press
-              // Navigate to chat screen or perform chat action
-            },
+            onPressed: _openChatScreen,
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -177,7 +249,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         child: Column(
           children: [
             _buildProfileHeader(),
-            _buildBioSection(context),
+            _buildBioSection(),
             _buildPostsGrid(),
           ],
         ),
@@ -234,7 +306,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
-  Widget _buildBioSection(BuildContext context) {
+  
+  Widget _buildBioSection() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -286,55 +359,29 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
-   Widget _buildPostsGrid() {
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.uid)
-          .collection('posts')
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}', style: TextStyle(color: Colors.white))); // Text color
-        } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(child: Text('No posts found', style: TextStyle(color: Colors.white))); // Text color
-        } else {
-          final posts = snapshot.data!.docs.map((doc) {
-            var data = doc.data();
-            return {
-              'postId': doc.id,
-              'title': data['title'] ?? '',
-              'description': data['description'] ?? '',
-              'imageUrl': data['imageUrl'] ?? '',
-            };
-          }).toList();
-           return GridView.builder(
-            padding: EdgeInsets.all(16.0),
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(), // Disable scrolling for nested scroll view
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 4.0,
-              mainAxisSpacing: 4.0,
+  Widget _buildPostsGrid() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing:4.0,
+          mainAxisSpacing: 4.0,
+        ),
+        itemCount: posts.length,
+        itemBuilder: (context, index) {
+          final post = posts[index];
+          return GestureDetector(
+            onTap: () => _viewPost(post),
+            child: CachedNetworkImage(
+              imageUrl: post['imageUrl'] ?? '',
+              fit: BoxFit.cover,
             ),
-            itemCount: posts.length,
-            itemBuilder: (context, index) {
-              final post = posts[index];
-              return GestureDetector(
-                onTap: () => _viewPost(post),
-                child: CachedNetworkImage(
-                  imageUrl: post['imageUrl'],
-                  placeholder: (context, url) => CircularProgressIndicator(),
-                  errorWidget: (context, url, error) => Icon(Icons.error, color: Colors.white),
-                  fit: BoxFit.cover,
-                ),
-              );
-            },
           );
-        }
-      },
+        },
+      ),
     );
   }
 }

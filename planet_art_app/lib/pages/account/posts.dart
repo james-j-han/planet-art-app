@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../explore/user_profile_page.dart';
 
 class PostsPage extends StatefulWidget {
   final List<Map<String, dynamic>> posts;
@@ -28,12 +29,14 @@ class _PostsPageState extends State<PostsPage> {
   bool _isScrollInitialized = false;
   String? _postToDeleteId; // Track the postId for deletion
   String? _profileImageUrl; // To store the profile image URL
+  String? _userName; // To store the user's name
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
     _fetchProfileImageUrl();
+    _fetchUserName();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_isScrollInitialized) {
@@ -61,18 +64,28 @@ class _PostsPageState extends State<PostsPage> {
     }
   }
 
+  void _fetchUserName() async {
+    try {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(widget.uid).get();
+      final data = userDoc.data();
+      setState(() {
+        _userName = data?['name']; // Assume the field for the user's name is 'name'
+      });
+    } catch (e) {
+      print('Error fetching user name: ${e.toString()}');
+    }
+  }
+
   void _scrollToInitialIndex(int index) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (index >= 0 && index < widget.posts.length) {
         if (widget.posts.length == 1) {
-          // Handle case with only one item
           print('Single item case, no scrolling needed.');
           return;
         }
 
         double scrollOffset = _itemHeight * index;
 
-        // Ensure ScrollController is attached
         if (_scrollController.hasClients) {
           _scrollController.animateTo(
             scrollOffset,
@@ -151,22 +164,25 @@ class _PostsPageState extends State<PostsPage> {
     }
   }
 
+  void _viewPost(Map<String, dynamic> post) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UserProfilePage(uid: post['uid'], posts: widget.posts), // Adjust this line as needed
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.name),
-        actions: [
-          if (_postToDeleteId != null) // Show delete button if postId is set
-            IconButton(
-              icon: Icon(Icons.delete),
-              onPressed: _showDeleteConfirmationDialog,
-            ),
-        ],
-        backgroundColor: Color.fromARGB(255, 53, 48, 115), // AppBar background color
-        iconTheme: IconThemeData(color: Colors.white), // Set icon color to white
+        title: Text(widget.name, style: TextStyle(color: Colors.white)),
+        
+        backgroundColor: Color.fromARGB(255, 40, 35, 88),
+        iconTheme: IconThemeData(color: Colors.white),
       ),
-      backgroundColor: Color.fromARGB(255, 53, 48, 115), // Background color of the Scaffold
+      backgroundColor: Color.fromARGB(255, 53, 48, 115),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('users')
@@ -188,6 +204,7 @@ class _PostsPageState extends State<PostsPage> {
                 'title': data['title'] ?? '',
                 'description': data['description'] ?? '',
                 'imageUrl': data['imageUrl'] ?? '',
+                'uid': data['uid'], // Ensure you include 'uid' here
               };
             }).toList();
 
@@ -212,7 +229,7 @@ class _PostsPageState extends State<PostsPage> {
                         child: GestureDetector(
                           onTap: () {
                             print('Tapped on image $index');
-                            _scrollToInitialIndex(index);
+                            _viewPost(post);
                           },
                           child: CachedNetworkImage(
                             imageUrl: post['imageUrl'] ?? '',
@@ -231,9 +248,11 @@ class _PostsPageState extends State<PostsPage> {
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-                        child: Text(post['description'] ?? '', style: TextStyle(color: Colors.white)),
+                        child: Text(
+                          post['description'] ?? '',
+                          style: TextStyle(fontSize: 16, color: Colors.white),
+                        ),
                       ),
-                      SizedBox(height: 8.0),
                     ],
                   ),
                 );
@@ -247,26 +266,33 @@ class _PostsPageState extends State<PostsPage> {
 
   Widget _buildPostHeader(String postId) {
     return Container(
-      color: Color.fromARGB(255, 40, 35, 88), // Darker purple for the post header
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      padding: EdgeInsets.all(8.0),
+      color: Color.fromARGB(255, 40, 35, 88), // Updated color
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
               CircleAvatar(
-                radius: 20,
                 backgroundImage: _profileImageUrl != null
-                    ? CachedNetworkImageProvider(_profileImageUrl!)
-                    : AssetImage('assets/default_profile.png') as ImageProvider, // Default image if URL is null
-                backgroundColor: Colors.transparent, // Ensure profile images are visible
+                    ? NetworkImage(_profileImageUrl!)
+                    : AssetImage('assets/default_profile.png') as ImageProvider,
               ),
-              SizedBox(width: 8),
+              SizedBox(width: 8.0),
               Text(
-                widget.name,
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white), // Ensure text is visible
+                _userName ?? 'Loading...',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
             ],
+          ),
+          IconButton(
+            icon: Icon(Icons.delete, color: Colors.white),
+            onPressed: () {
+              setState(() {
+                _postToDeleteId = postId;
+              });
+              _showDeleteConfirmationDialog();
+            },
           ),
         ],
       ),
