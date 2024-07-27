@@ -21,6 +21,7 @@ class _EventPageState extends State<EventPage> {
   final _textController = TextEditingController();
 
   bool _showUpcoming = true;
+  bool _isLoading = true;
 
   // Control sessions
   var uuid = const Uuid();
@@ -52,38 +53,6 @@ class _EventPageState extends State<EventPage> {
 
   void _onTextChanged() {}
 
-  // void getSuggestion() async {
-  //   try {
-  //     String baseURL =
-  //         'https://maps.googleapis.com/maps/api/place/autocomplete/json';
-  //     String request =
-  //         '$baseURL?input=Art%20Exhibition&key=$PLACES_API_KEY&sessiontoken=$_sessionToken';
-  //     var response = await http.get(Uri.parse(request));
-  //     var data = json.decode(response.body);
-
-  //     if (kDebugMode) {
-  //       print('mydata');
-  //       print(data);
-  //     }
-
-  //     if (response.statusCode == 200) {
-  //       setState(() {
-  //         _places = data['predictions'];
-  //       });
-
-  //       if (_places.isNotEmpty) {
-  //         var firstPlace = _places.first;
-  //         await getPlaceDetails(
-  //             firstPlace['place_id'], firstPlace['description']);
-  //       }
-  //     } else {
-  //       throw Exception('Failed to load predictions');
-  //     }
-  //   } catch (e) {
-  //     print(e);
-  //   }
-  // }
-
   Future<void> _requestLocationPermission() async {
     var status = await Permission.location.status;
     if (!status.isGranted) {
@@ -107,25 +76,92 @@ class _EventPageState extends State<EventPage> {
     }
   }
 
+  // void getSuggestion() async {
+  //   try {
+  //     // Request location permission
+  //     await _requestLocationPermission();
+
+  //     // Get current location
+  //     Position? position = await _getCurrentLocation();
+
+  //     if (position == null) {
+  //       print('Could not get current location');
+  //       return;
+  //     } else {
+  //       print('${position.latitude},${position.longitude}');
+  //     }
+
+  //     // Extract latitude and longitude
+  //     String location = '${position.latitude},${position.longitude}';
+  //     String radius = '5000'; // 5 km radius
+  //     String type = 'art_gallery'; // Search for art galleries
+  //     String baseURL =
+  //         'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
+  //     String request =
+  //         '$baseURL?location=$location&radius=$radius&type=$type&key=$PLACES_API_KEY';
+
+  //     List<dynamic> allPlaces = [];
+  //     String? nextPageToken;
+
+  //     while (true) {
+  //       // Make the API request
+  //       var response = await http.get(Uri.parse(nextPageToken ?? request));
+  //       var data = json.decode(response.body);
+
+  //       if (kDebugMode) {
+  //         print('mydata');
+  //         print(data);
+  //       }
+
+  //       if (response.statusCode == 200) {
+  //         // Add results to the list
+  //         allPlaces.addAll(data['results'] ?? []);
+
+  //         // Check for next page token
+  //         nextPageToken = data['next_page_token'];
+
+  //         // If there is no next page token, break the loop
+  //         if (nextPageToken == null) {
+  //           break;
+  //         }
+
+  //         // Wait for a short period before making the next request
+  //         await Future.delayed(const Duration(seconds: 2));
+  //       } else {
+  //         throw Exception('Failed to load predictions');
+  //       }
+  //     }
+
+  //     setState(() {
+  //       _places = allPlaces;
+  //     });
+
+  //     if (_places.isNotEmpty) {
+  //       // var firstPlace = _places.first;
+  //       // await getPlaceDetails(firstPlace['place_id'], firstPlace['name']);
+
+  //       for (var place in _places) {
+  //         await getPlaceDetails(place['place_id'], place['name']);
+  //       }
+  //     }
+  //   } catch (e) {
+  //     print(e);
+  //   }
+  // }
+
   void getSuggestion() async {
     try {
-      // Request location permission
       await _requestLocationPermission();
-
-      // Get current location
       Position? position = await _getCurrentLocation();
 
       if (position == null) {
         print('Could not get current location');
         return;
-      } else {
-        print('${position.latitude},${position.longitude}');
       }
 
-      // Extract latitude and longitude
       String location = '${position.latitude},${position.longitude}';
-      String radius = '5000'; // 5 km radius
-      String type = 'art_gallery'; // Search for art galleries
+      String radius = '5000';
+      String type = 'art_gallery';
       String baseURL =
           'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
       String request =
@@ -134,49 +170,95 @@ class _EventPageState extends State<EventPage> {
       List<dynamic> allPlaces = [];
       String? nextPageToken;
 
-      while (true) {
-        // Make the API request
-        var response = await http.get(Uri.parse(nextPageToken ?? request));
+      do {
+        var response = await http.get(Uri.parse(nextPageToken == null
+            ? request
+            : '$baseURL?pagetoken=$nextPageToken&key=$PLACES_API_KEY'));
         var data = json.decode(response.body);
 
-        if (kDebugMode) {
-          print('mydata');
-          print(data);
-        }
-
         if (response.statusCode == 200) {
-          // Add results to the list
           allPlaces.addAll(data['results'] ?? []);
-
-          // Check for next page token
           nextPageToken = data['next_page_token'];
 
-          // If there is no next page token, break the loop
-          if (nextPageToken == null) {
-            break;
+          if (nextPageToken != null) {
+            await Future.delayed(const Duration(seconds: 2));
           }
-
-          // Wait for a short period before making the next request
-          await Future.delayed(const Duration(seconds: 2));
         } else {
           throw Exception('Failed to load predictions');
         }
-      }
+      } while (nextPageToken != null);
 
       setState(() {
         _places = allPlaces;
+        _isLoading = false;
       });
 
       if (_places.isNotEmpty) {
-        var firstPlace = _places.first;
-        await getPlaceDetails(firstPlace['place_id'], firstPlace['name']);
+        List<Map<String, dynamic>> tempPhotoUrlsWithNames = [];
+
+        for (var place in _places) {
+          var placeDetails =
+              await getPlaceDetails(place['place_id'], place['name']);
+          tempPhotoUrlsWithNames.addAll(placeDetails);
+        }
+
+        setState(() {
+          _photoUrlsWithNames = tempPhotoUrlsWithNames;
+        });
       }
     } catch (e) {
       print(e);
     }
   }
 
-  Future<void> getPlaceDetails(String placeID, String placeName) async {
+  // Future<void> getPlaceDetails(String placeID, String placeName) async {
+  //   try {
+  //     String baseURL =
+  //         'https://maps.googleapis.com/maps/api/place/details/json';
+  //     String request = '$baseURL?place_id=$placeID&key=$PLACES_API_KEY';
+  //     var response = await http.get(Uri.parse(request));
+  //     var data = json.decode(response.body);
+
+  //     if (response.statusCode == 200) {
+  //       var placeDetails = data['result'];
+  //       var photos = placeDetails['photos'] ?? [];
+  //       var formattedAddress = placeDetails['formatted_address'];
+  //       // var openingHours = placeDetails['opening_hours']?['weekday_text'] ?? [];
+  //       var openingHours =
+  //           (placeDetails['opening_hours']?['weekday_text'] as List<dynamic>?)
+  //                   ?.map((e) => e.toString())
+  //                   .toList() ??
+  //               [];
+
+  //       _photoUrlsWithNames.clear();
+  //       for (var photo in photos) {
+  //         var photoReference = photo['photo_reference'];
+  //         if (photoReference != null) {
+  //           var photoUrl = await getPlacePhoto(photoReference);
+  //           if (photoUrl != null) {
+  //             _photoUrlsWithNames.add({
+  //               'url': photoUrl,
+  //               'name': placeName,
+  //               'address': formattedAddress,
+  //               'opening_hours': openingHours, // Ensure this is a List<String>
+  //             });
+  //           }
+  //         }
+  //       }
+
+  //       setState(() {});
+  //     } else {
+  //       throw Exception('Failed to load place details');
+  //     }
+  //   } catch (e) {
+  //     print(e);
+  //   }
+  // }
+
+  Future<List<Map<String, dynamic>>> getPlaceDetails(
+      String placeID, String placeName) async {
+    List<Map<String, dynamic>> placeData = [];
+
     try {
       String baseURL =
           'https://maps.googleapis.com/maps/api/place/details/json';
@@ -188,36 +270,34 @@ class _EventPageState extends State<EventPage> {
         var placeDetails = data['result'];
         var photos = placeDetails['photos'] ?? [];
         var formattedAddress = placeDetails['formatted_address'];
-        // var openingHours = placeDetails['opening_hours']?['weekday_text'] ?? [];
         var openingHours =
             (placeDetails['opening_hours']?['weekday_text'] as List<dynamic>?)
                     ?.map((e) => e.toString())
                     .toList() ??
                 [];
 
-        _photoUrlsWithNames.clear();
         for (var photo in photos) {
           var photoReference = photo['photo_reference'];
           if (photoReference != null) {
             var photoUrl = await getPlacePhoto(photoReference);
             if (photoUrl != null) {
-              _photoUrlsWithNames.add({
+              placeData.add({
                 'url': photoUrl,
                 'name': placeName,
                 'address': formattedAddress,
-                'opening_hours': openingHours, // Ensure this is a List<String>
+                'opening_hours': openingHours,
               });
             }
           }
         }
-
-        setState(() {});
       } else {
         throw Exception('Failed to load place details');
       }
     } catch (e) {
       print(e);
     }
+
+    return placeData;
   }
 
   Future<String?> getPlacePhoto(String photoReference) async {
@@ -271,14 +351,14 @@ class _EventPageState extends State<EventPage> {
                       ),
                       child: TextField(
                         controller: _textController,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           prefixIcon: Icon(Icons.search, color: Colors.black),
                           hintText: 'Search anything',
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.symmetric(
                               horizontal: 16.0, vertical: 8.0),
                         ),
-                        style: TextStyle(color: Colors.black),
+                        style: const TextStyle(color: Colors.black),
                       ),
                     ),
                   ),
@@ -288,56 +368,60 @@ class _EventPageState extends State<EventPage> {
           ],
         ),
       ),
-      body: Column(
-        children: [
-          // Tabs or categories
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
               children: [
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _showUpcoming = true;
-                    });
-                  },
-                  child: Text(
-                    'Upcoming',
-                    style: TextStyle(
-                      color: _showUpcoming
-                          ? Colors.white
-                          : Color.fromARGB(255, 194, 189, 251),
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                // Tabs or categories
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _showUpcoming = true;
+                          });
+                        },
+                        child: Text(
+                          'Upcoming',
+                          style: TextStyle(
+                            color: _showUpcoming
+                                ? Colors.white
+                                : Color.fromARGB(255, 194, 189, 251),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _showUpcoming = false;
+                          });
+                        },
+                        child: Text(
+                          'Calendar',
+                          style: TextStyle(
+                            color: !_showUpcoming
+                                ? Colors.white
+                                : Color.fromARGB(255, 194, 189, 251),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _showUpcoming = false;
-                    });
-                  },
-                  child: Text(
-                    'Calendar',
-                    style: TextStyle(
-                      color: !_showUpcoming
-                          ? Colors.white
-                          : Color.fromARGB(255, 194, 189, 251),
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                Expanded(
+                  child: _showUpcoming
+                      ? _buildUpcomingView()
+                      : _buildCalendarView(),
                 ),
               ],
             ),
-          ),
-          Expanded(
-            child: _showUpcoming ? _buildUpcomingView() : _buildCalendarView(),
-          ),
-        ],
-      ),
     );
   }
 
@@ -442,14 +526,37 @@ class _EventPageState extends State<EventPage> {
     );
   }
 
+  // void _filterPlacesByDate() {
+  //   print('Before filtering: $_photoUrlsWithNames'); // Debug print
+  //   setState(() {
+  //     _photoUrlsWithNames = _photoUrlsWithNames.where((place) {
+  //       var openingHours = place['opening_hours'] as List<String>? ?? [];
+  //       return _isOpenOnSelectedDate(openingHours);
+  //     }).toList();
+  //   });
+  //   print('After filtering: $_photoUrlsWithNames'); // Debug print
+  // }
+
   void _filterPlacesByDate() {
     print('Before filtering: $_photoUrlsWithNames'); // Debug print
+
     setState(() {
+      // Use a Set to ensure uniqueness
+      final seenPlaceIds = <String>{};
       _photoUrlsWithNames = _photoUrlsWithNames.where((place) {
+        var placeId = place['place_id'];
         var openingHours = place['opening_hours'] as List<String>? ?? [];
-        return _isOpenOnSelectedDate(openingHours);
+        bool isOpen = _isOpenOnSelectedDate(openingHours);
+
+        // Add the place to the list if it's open on the selected date and hasn't been added yet
+        if (isOpen && !seenPlaceIds.contains(placeId)) {
+          seenPlaceIds.add(placeId);
+          return true;
+        }
+        return false;
       }).toList();
     });
+
     print('After filtering: $_photoUrlsWithNames'); // Debug print
   }
 
@@ -458,6 +565,12 @@ class _EventPageState extends State<EventPage> {
         DateFormat('EEEE').format(_selectedDate); // e.g., 'Monday'
     return openingHours.any((hours) => hours.contains(dayOfWeek));
   }
+
+  // bool _isOpenOnSelectedDate(List<String> openingHours) {
+  //   String dayOfWeek =
+  //       DateFormat('EEEE').format(_selectedDate); // e.g., 'Monday'
+  //   return openingHours.any((hours) => hours.contains(dayOfWeek));
+  // }
 
   Widget _buildCalendarView() {
     String formattedDate =
@@ -513,37 +626,119 @@ class _EventPageState extends State<EventPage> {
             itemBuilder: (context, index) {
               var item = _photoUrlsWithNames[index];
               var name = item['name'];
-              var openingHours = item['opening_hours'] as List<String>? ?? [];
 
               // Debug print to check the data for each ListTile
               print('ListTile $index: $item');
 
-              // Filter out places that are not open on the selected date
-              if (_isOpenOnSelectedDate(openingHours)) {
-                return ListTile(
-                  leading: const Icon(Icons.location_on, color: Colors.white),
-                  title: Text(
-                    name ?? 'no name',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  subtitle: const Text(
-                    'Open today',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => EventDetailPage(item: item)));
-                  },
-                );
-              } else {
-                return Container(); // Empty container if not open
-              }
+              return ListTile(
+                leading: const Icon(Icons.location_on, color: Colors.white),
+                title: Text(
+                  name ?? 'no name',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                subtitle: const Text(
+                  'Open today',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => EventDetailPage(item: item)));
+                },
+              );
             },
           ),
         ),
       ],
     );
   }
+
+  // Widget _buildCalendarView() {
+  //   String formattedDate =
+  //       DateFormat.yMMMMd().format(_selectedDate); // Format the date
+
+  //   return Column(
+  //     children: [
+  //       // Display today's date
+  //       Padding(
+  //         padding: const EdgeInsets.all(16.0),
+  //         child: ListTile(
+  //           leading: const Icon(
+  //             Icons.calendar_today_rounded,
+  //             color: Colors.white,
+  //           ),
+  //           title: Text(
+  //             formattedDate,
+  //             style: const TextStyle(
+  //                 fontSize: 20,
+  //                 fontWeight: FontWeight.bold,
+  //                 color: Colors.white),
+  //           ),
+  //         ),
+  //       ),
+  //       // Button to change the date
+  //       Padding(
+  //         padding: const EdgeInsets.symmetric(horizontal: 16.0),
+  //         child: ElevatedButton(
+  //           onPressed: () async {
+  //             // Show date picker
+  //             DateTime? newDate = await showDatePicker(
+  //               context: context,
+  //               initialDate: _selectedDate,
+  //               firstDate: DateTime(2000),
+  //               lastDate: DateTime(2100),
+  //             );
+
+  //             if (newDate != null && newDate != _selectedDate) {
+  //               setState(() {
+  //                 _selectedDate = newDate;
+  //                 // Filter places based on the selected date
+  //                 _filterPlacesByDate();
+  //               });
+  //             }
+  //           },
+  //           child: const Text('Change Date'),
+  //         ),
+  //       ),
+  //       // Display the list of items
+  //       Expanded(
+  //         child: ListView.builder(
+  //           itemCount: _photoUrlsWithNames.length,
+  //           itemBuilder: (context, index) {
+  //             var item = _photoUrlsWithNames[index];
+  //             var name = item['name'];
+  //             // var openingHours = item['opening_hours'] as List<String>? ?? [];
+
+  //             // Debug print to check the data for each ListTile
+  //             print('ListTile $index: $item');
+
+  //             // Filter out places that are not open on the selected date
+  //             if (_isOpenOnSelectedDate(openingHours)) {
+  //               return ListTile(
+  //                 leading: const Icon(Icons.location_on, color: Colors.white),
+  //                 title: Text(
+  //                   name ?? 'no name',
+  //                   style: const TextStyle(color: Colors.white),
+  //                 ),
+  //                 subtitle: const Text(
+  //                   'Open today',
+  //                   style: TextStyle(color: Colors.white),
+  //                 ),
+  //                 onTap: () {
+  //                   Navigator.push(
+  //                       context,
+  //                       MaterialPageRoute(
+  //                           builder: (context) => EventDetailPage(item: item)));
+  //                 },
+  //               );
+  //             } else {
+  //               return Container(); // Empty container if not open
+  //             }
+  //           },
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
 }
