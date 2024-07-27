@@ -35,6 +35,8 @@ class _EventPageState extends State<EventPage> {
   // List<Map<String, String>> _photoUrlsWithNames = [];
   List<Map<String, dynamic>> _photoUrlsWithNames = [];
 
+  DateTime _selectedDate = DateTime.now();
+
   @override
   void initState() {
     super.initState();
@@ -116,11 +118,13 @@ class _EventPageState extends State<EventPage> {
       if (position == null) {
         print('Could not get current location');
         return;
+      } else {
+        print('${position.latitude},${position.longitude}');
       }
 
       // Extract latitude and longitude
       String location = '${position.latitude},${position.longitude}';
-      String radius = '5000'; // 20 km radius
+      String radius = '5000'; // 5 km radius
       String type = 'art_gallery'; // Search for art galleries
       String baseURL =
           'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
@@ -184,7 +188,12 @@ class _EventPageState extends State<EventPage> {
         var placeDetails = data['result'];
         var photos = placeDetails['photos'] ?? [];
         var formattedAddress = placeDetails['formatted_address'];
-        var openingHours = placeDetails['opening_hours']?['weekday_text'] ?? [];
+        // var openingHours = placeDetails['opening_hours']?['weekday_text'] ?? [];
+        var openingHours =
+            (placeDetails['opening_hours']?['weekday_text'] as List<dynamic>?)
+                    ?.map((e) => e.toString())
+                    .toList() ??
+                [];
 
         _photoUrlsWithNames.clear();
         for (var photo in photos) {
@@ -415,19 +424,62 @@ class _EventPageState extends State<EventPage> {
     );
   }
 
+  void _filterPlacesByDate() {
+    print('Before filtering: $_photoUrlsWithNames'); // Debug print
+    setState(() {
+      _photoUrlsWithNames = _photoUrlsWithNames.where((place) {
+        var openingHours = place['opening_hours'] as List<String>? ?? [];
+        return _isOpenOnSelectedDate(openingHours);
+      }).toList();
+    });
+    print('After filtering: $_photoUrlsWithNames'); // Debug print
+  }
+
+  bool _isOpenOnSelectedDate(List<String> openingHours) {
+    String dayOfWeek =
+        DateFormat('EEEE').format(_selectedDate); // e.g., 'Monday'
+    return openingHours.any((hours) => hours.contains(dayOfWeek));
+  }
+
   Widget _buildCalendarView() {
-    // Get today's date
-    DateTime now = DateTime.now();
-    String formattedDate = DateFormat.yMMMMd().format(now); // Format the date
+    String formattedDate =
+        DateFormat.yMMMMd().format(_selectedDate); // Format the date
 
     return Column(
       children: [
         // Display today's date
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Text(
-            formattedDate,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          child: ListTile(
+            leading: const Icon(Icons.calendar_today_rounded),
+            title: Text(
+              formattedDate,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+        // Button to change the date
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: ElevatedButton(
+            onPressed: () async {
+              // Show date picker
+              DateTime? newDate = await showDatePicker(
+                context: context,
+                initialDate: _selectedDate,
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2100),
+              );
+
+              if (newDate != null && newDate != _selectedDate) {
+                setState(() {
+                  _selectedDate = newDate;
+                  // Filter places based on the selected date
+                  _filterPlacesByDate();
+                });
+              }
+            },
+            child: const Text('Change Date'),
           ),
         ),
         // Display the list of items
@@ -437,9 +489,21 @@ class _EventPageState extends State<EventPage> {
             itemBuilder: (context, index) {
               var item = _photoUrlsWithNames[index];
               var name = item['name'];
-              return const ListTile(
-                title: Text('test'),
-              );
+              var openingHours = item['opening_hours'] as List<String>? ?? [];
+
+              // Debug print to check the data for each ListTile
+              print('ListTile $index: $item');
+
+              // Filter out places that are not open on the selected date
+              if (_isOpenOnSelectedDate(openingHours)) {
+                return ListTile(
+                  leading: const Icon(Icons.location_on),
+                  title: Text(name ?? 'no name'),
+                  subtitle: const Text('Open today'),
+                );
+              } else {
+                return Container(); // Empty container if not open
+              }
             },
           ),
         ),
