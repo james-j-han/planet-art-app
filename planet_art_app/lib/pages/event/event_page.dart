@@ -232,39 +232,53 @@ class _EventPageState extends State<EventPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color.fromARGB(255, 53, 48, 115),
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
-        leading: const Icon(
-          Icons.android_rounded,
-          color: Colors.white,
-        ),
-        title: TextField(
-          controller: _textController,
-          decoration: InputDecoration(
-            hintText: 'Search anything',
-            prefixIcon: const Icon(Icons.search, color: Colors.white),
-            filled: true,
-            fillColor: Colors.white24,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30.0),
-              borderSide: BorderSide.none,
+        elevation: 0,
+        backgroundColor: Color.fromARGB(255, 53, 48, 115),
+        flexibleSpace: Column(
+          children: [
+            SizedBox(height: 40.0),
+            Container(
+              margin: EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 40.0,
+                    height: 40.0,
+                    margin: EdgeInsets.only(right: 16.0),
+                    child: Image.network(
+                      'https://firebasestorage.googleapis.com/v0/b/planet-art-app.appspot.com/o/app%2Ficons8-planet-48%20(1).png?alt=media&token=e4297794-f47d-4b68-ab82-9a39f3049ed5',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Expanded(
+                    child: Container(
+                      height: 36.0,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(20.0),
+                      ),
+                      child: TextField(
+                        controller: _textController,
+                        decoration: InputDecoration(
+                          prefixIcon: Icon(Icons.search, color: Colors.black),
+                          hintText: 'Search anything',
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        ),
+                        style: TextStyle(color: Colors.black),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.clear_rounded,
-              color: Colors.white,
-            ),
-            onPressed: () {
-              setState(() {
-                _textController.clear();
-              });
-            },
-          ),
-        ],
       ),
+
       body: Column(
         children: [
           // Tabs or categories
@@ -279,10 +293,10 @@ class _EventPageState extends State<EventPage> {
                       _showUpcoming = true;
                     });
                   },
-                  child: const Text(
+                  child: Text(
                     'Upcoming',
                     style: TextStyle(
-                      color: Colors.black,
+                      color: _showUpcoming ? Colors.white : Color.fromARGB(255, 194, 189, 251),
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -294,16 +308,17 @@ class _EventPageState extends State<EventPage> {
                       _showUpcoming = false;
                     });
                   },
-                  child: const Text(
+                  child: Text(
                     'Calendar',
                     style: TextStyle(
-                      color: Colors.black,
+                      color: !_showUpcoming ? Colors.white : Color.fromARGB(255, 194, 189, 251),
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
               ],
+
             ),
           ),
           Expanded(
