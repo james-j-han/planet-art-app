@@ -4,11 +4,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'connections_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'settings_page.dart';
 import 'edit_profile_page.dart';
 import 'add_post_page.dart';
 import 'posts.dart';
-import '../../auth.dart';
+import 'package:planet_art_app/auth.dart'; // Import your Auth file here
 
 class AccountPage extends StatefulWidget {
   @override
@@ -23,6 +22,8 @@ class _AccountPageState extends State<AccountPage> {
   String profileImageUrl = '';
   String portfolioLink = ''; 
   int connections = 0;
+
+  final Auth _auth = Auth(); // Create an instance of Auth
 
   @override
   void initState() {
@@ -86,236 +87,224 @@ class _AccountPageState extends State<AccountPage> {
     );
   }
 
+  void _signOut() async {
+    await _auth.signOut(); // Call the instance method
+    Navigator.pushReplacementNamed(context, '/login'); // Navigate to login screen after sign out
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(name),
-        leading: null, // Remove the icon on the left
+        backgroundColor: Color.fromARGB(255, 40, 35, 88),
+        title: Text(name, style: TextStyle(color: Colors.white)),
+        iconTheme: IconThemeData(color: Colors.white), // Set icon color to white
+        automaticallyImplyLeading: false, // Remove leading icon
       ),
-      body: SingleChildScrollView(
+      body: Container(
+        color: Color.fromARGB(255, 53, 48, 115),
         child: Column(
+          mainAxisSize: MainAxisSize.max, // Ensure the column takes up the full height
           children: [
-            _buildProfileHeader(),
-            _buildBioSection(context),
-            _buildPostsGrid(),
-          ],
-        ),
-      ),
-      endDrawer: _buildDrawer(context),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => AddPostPage()),
-          ).then((_) {
-            // The stream will handle updating the posts automatically
-          });
-        },
-        child: Icon(Icons.add),
-      ),
-    );
-  }
-
-  Widget _buildProfileHeader() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundImage: CachedNetworkImageProvider(profileImageUrl),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
                   children: [
-                    Text(
-                      name,
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 40,
+                            backgroundImage: CachedNetworkImageProvider(profileImageUrl),
+                          ),
+                          SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      name,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      pronouns,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[300],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  occupation,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    SizedBox(width: 8),
-                    Text(
-                      pronouns,
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                    // Moved the bio section higher up by reducing the top padding
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            bio,
+                            textAlign: TextAlign.start,
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          SizedBox(height: 16),
+                          Row(
+                            children: [
+                              if (portfolioLink.isNotEmpty) 
+                                GestureDetector(
+                                  onTap: () {
+                                    _launchURL(portfolioLink); 
+                                  },
+                                  child: Text(
+                                    portfolioLink,
+                                    style: TextStyle(
+                                      color: Colors.blue,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                              Spacer(),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ConnectionsPage(uid: FirebaseAuth.instance.currentUser!.uid),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  '$connections Connections',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white.withOpacity(.5),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(FirebaseAuth.instance.currentUser!.uid)
+                          .collection('posts')
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return Center(child: CircularProgressIndicator());
+                        } else if (snapshot.hasError) {
+                          return Center(child: Text('Error: ${snapshot.error}'));
+                        } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          return Center(child: Text('No posts found', style: TextStyle(color: Colors.white)));
+                        } else {
+                          final posts = snapshot.data!.docs.map((doc) {
+                            var data = doc.data();
+                            return {
+                              'postId': doc.id,
+                              'title': data['title'] ?? '',
+                              'description': data['description'] ?? '',
+                              'imageUrl': data['imageUrl'] ?? '',
+                            };
+                          }).toList();
+
+                          return GridView.builder(
+                            padding: EdgeInsets.all(16.0),
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 4.0,
+                              mainAxisSpacing: 4.0,
+                            ),
+                            itemCount: posts.length,
+                            itemBuilder: (context, index) {
+                              final post = posts[index];
+                              return GestureDetector(
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => PostsPage(
+                                      posts: posts,
+                                      initialIndex: index,
+                                      name: name,
+                                      uid: FirebaseAuth.instance.currentUser!.uid,
+                                      onPostsUpdated: (updatedPosts) {},
+                                    ),
+                                  ),
+                                ),
+                                child: CachedNetworkImage(
+                                  imageUrl: post['imageUrl'],
+                                  placeholder: (context, url) => CircularProgressIndicator(),
+                                  errorWidget: (context, url, error) => Icon(Icons.error, color: Colors.white),
+                                  fit: BoxFit.cover,
+                                ),
+                              );
+                            },
+                          );
+                        }
+                      },
                     ),
                   ],
                 ),
-                Text(
-                  occupation,
-                  style: TextStyle(fontSize: 16),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBioSection(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            bio,
-            textAlign: TextAlign.start,
-          ),
-          SizedBox(height: 16),
-          Row(
-            children: [
-              if (portfolioLink.isNotEmpty) 
-                GestureDetector(
-                  onTap: () {
-                    _launchURL(portfolioLink); 
-                  },
-                  child: Text(
-                    portfolioLink,
-                    style: TextStyle(
-                      color: Colors.blue,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                ),
-              Spacer(), // Pushes the connections button to the right
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ConnectionsPage(uid: FirebaseAuth.instance.currentUser!.uid),
-                    ),
-                  );
-                },
-                child: Text(
-                  '$connections Connections',
-                ),
               ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPostsGrid() {
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(FirebaseAuth.instance.currentUser!.uid)
-          .collection('posts')
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(child: Text('No posts found'));
-        } else {
-          final posts = snapshot.data!.docs.map((doc) {
-            var data = doc.data();
-            return {
-              'postId': doc.id,
-              'title': data['title'] ?? '',
-              'description': data['description'] ?? '',
-              'imageUrl': data['imageUrl'] ?? '',
-            };
-          }).toList();
-
-          return GridView.builder(
-            padding: EdgeInsets.all(16.0),
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 4.0,
-              mainAxisSpacing: 4.0,
             ),
-            itemCount: posts.length,
-            itemBuilder: (context, index) {
-              final post = posts[index];
-              return GestureDetector(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PostsPage(
-                      posts: posts, // Pass all posts
-                      initialIndex: index,
-                      name: name,
-                      uid: FirebaseAuth.instance.currentUser!.uid,
-                      onPostsUpdated: (updatedPosts) {}, // Handle post updates if needed
-                    ),
+          ],
+        ),
+      ),
+      endDrawer: Drawer(
+        backgroundColor: Color.fromARGB(255, 80, 75, 150), // Lighter shade of the background color
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                children: <Widget>[
+                  ListTile(
+                    title: Text('Edit Profile', style: TextStyle(color: Colors.white)),
+                    leading: Icon(Icons.edit, color: Colors.white),
+                    onTap: _editProfile,
                   ),
-                ),
-                child: CachedNetworkImage(
-                  imageUrl: post['imageUrl'],
-                  placeholder: (context, url) => CircularProgressIndicator(),
-                  errorWidget: (context, url, error) => Icon(Icons.error),
-                  fit: BoxFit.cover,
-                ),
-              );
-            },
-          );
-        }
-      },
-    );
-  }
-
-  Widget _buildDrawer(BuildContext context) {
-    return Drawer(
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              children: <Widget>[
-                ListTile(
-                  title: Text('Edit Profile'),
-                  leading: Icon(Icons.edit),
-                  onTap: _editProfile,
-                ),
-                ListTile(
-                  title: Text('Settings'),
-                  leading: Icon(Icons.settings),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => SettingsPage()),
-                    );
-                  },
-                ),
-                ListTile(
-                  title: Text('Saved Events'),
-                  leading: Icon(Icons.bookmark),
-                  onTap: () {
-                    // open saved events
-                  },
-                ),
-              ],
+                  
+                  ListTile(
+                    title: Text('Saved Events', style: TextStyle(color: Colors.white)),
+                    leading: Icon(Icons.bookmark, color: Colors.white),
+                    onTap: () {
+                      // open saved events page
+                    },
+                  ),
+                  ListTile(
+                    title: Text('Sign Out', style: TextStyle(color: Colors.white)),
+                    leading: Icon(Icons.exit_to_app, color: Colors.white),
+                    onTap: _signOut,
+                  ),
+                ],
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: _signOutButton(),
-          ),
-        ],
+          ],
+        ),
       ),
     );
-  }
-
-  Widget _signOutButton() {
-    return ElevatedButton(
-      onPressed: signOut,
-      child: const Text('Sign Out'),
-    );
-  }
-
-  Future<void> signOut() async {
-    await Auth().signOut();
   }
 }

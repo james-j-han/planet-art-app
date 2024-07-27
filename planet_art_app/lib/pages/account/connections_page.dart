@@ -32,11 +32,17 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
           .get();
 
       final fetchedConnections = snapshot.docs.map((doc) {
-        return doc.data() as Map<String, dynamic>;
+        // Fetch user details from the 'users' collection
+        final userId = doc.id;
+        return _firestore.collection('users').doc(userId).get().then((userDoc) {
+          return userDoc.data() as Map<String, dynamic>;
+        });
       }).toList();
 
+      final userDocs = await Future.wait(fetchedConnections);
+
       setState(() {
-        connections = fetchedConnections;
+        connections = userDocs;
         filteredConnections = connections;
       });
     } catch (e) {
@@ -61,22 +67,29 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color.fromARGB(255, 53, 48, 115),
       appBar: AppBar(
-        title: Text('Connections'),
-        bottom: PreferredSize(
-          preferredSize: Size.fromHeight(50.0),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search connections',
-                border: OutlineInputBorder(),
-                filled: true,
-              ),
-              onChanged: _filterConnections,
+        backgroundColor: Color.fromARGB(255, 53, 48, 115),
+        title: Container(
+          padding: EdgeInsets.symmetric(horizontal: 10.0), // Horizontal padding
+          height: 36.0, // Set the height of the search bar
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.5), // Translucent white background
+            borderRadius: BorderRadius.circular(20), // Rounded corners
+          ),
+          child: TextField(
+            onChanged: _filterConnections,
+            style: TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              prefixIcon: Icon(Icons.search, color: Colors.white),
+              hintText: 'Search connections...',
+              hintStyle: TextStyle(color: Colors.white70),
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(vertical: 0.0), // Minimal vertical padding
             ),
           ),
         ),
+        iconTheme: IconThemeData(color: Colors.white), // Set icon color to white
       ),
       body: ListView.builder(
         itemCount: filteredConnections.length,
@@ -90,8 +103,10 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
             leading: CircleAvatar(
               backgroundImage: CachedNetworkImageProvider(profileImageUrl),
             ),
-            title: Text(name),
-            subtitle: Text(occupation),
+            title: Text(name, style: TextStyle(color: Colors.white)),
+            subtitle: Text(occupation, style: TextStyle(color: Colors.white70)),
+            tileColor: Color.fromARGB(255, 40, 35, 88), // Darker background for list items
+            contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           );
         },
       ),

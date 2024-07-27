@@ -46,6 +46,7 @@ class _ExplorePageState extends State<ExplorePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color.fromARGB(255, 53, 48, 115),
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(130.0),
         child: AppBar(
@@ -133,6 +134,8 @@ class _ExplorePageState extends State<ExplorePage> {
             // Filter posts based on the search query
             var filteredPosts = _posts.where((post) {
               final title = post['title'].toLowerCase();
+              final name = post['title'].toLowerCase();
+
               final description = post['description'].toLowerCase();
               return title.contains(_searchQuery) || description.contains(_searchQuery);
             }).toList();
@@ -147,24 +150,14 @@ class _ExplorePageState extends State<ExplorePage> {
               itemCount: filteredPosts.length,
               itemBuilder: (context, index) {
                 var post = filteredPosts[index];
-                return FutureBuilder<String>(
-                  future: _getUserName(post['uid']),
-                  builder: (context, userSnapshot) {
-                    if (userSnapshot.connectionState == ConnectionState.waiting) {
-                      return Center(child: CircularProgressIndicator());
-                    } else if (userSnapshot.hasError) {
-                      return Center(child: Icon(Icons.error));
-                    } else {
-                      final name = userSnapshot.data ?? 'Unknown';
-                      return GestureDetector(
-                        onTap: () => _onPostTap(index),
-                        child: CachedNetworkImage(
-                          imageUrl: post['imageUrl'],
-                          fit: BoxFit.cover,
-                        ),
-                      );
-                    }
-                  },
+                return GestureDetector(
+                  onTap: () => _onPostTap(index),
+                  child: CachedNetworkImage(
+                    imageUrl: post['imageUrl'],
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Center(child: CircularProgressIndicator()),
+                    errorWidget: (context, url, error) => Center(child: Icon(Icons.error)),
+                  ),
                 );
               },
             );
@@ -181,8 +174,10 @@ class _ExplorePageState extends State<ExplorePage> {
       context,
       MaterialPageRoute(
         builder: (context) => ExploreDetailPage(
-          posts: [post],
-          name: name, // pass the user's name
+          posts: _posts, // Pass the full list of posts
+          initialIndex: index, // Pass the index of the selected post
+          name: name, // Pass the user's name
+          uid: post['uid'], // Pass the user ID
         ),
       ),
     );
