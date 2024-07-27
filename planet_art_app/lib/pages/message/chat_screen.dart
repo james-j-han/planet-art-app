@@ -95,10 +95,11 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.purple[50],
+      backgroundColor: Color.fromARGB(255, 53, 48, 115), // Purple background
       appBar: AppBar(
-        title: Text('Chat'),
-        backgroundColor: Colors.purple,
+        title: Text('Chat', style: TextStyle(color: Colors.white)), // White text
+        backgroundColor: Color.fromARGB(255, 40, 36, 85), // Slightly darker purple
+        iconTheme: IconThemeData(color: Colors.white), // White back icon
       ),
       body: Column(
         children: [
@@ -114,15 +115,21 @@ class _ChatScreenState extends State<ChatScreen> {
                     controller: _messageController,
                     decoration: InputDecoration(
                       hintText: 'Enter message...',
-                      fillColor: Colors.white,
+                      fillColor: Colors.white.withOpacity(0.2), // Translucent white
                       filled: true,
+                      hintStyle: TextStyle(color: Colors.white), // White hint text
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
+                    style: TextStyle(color: Colors.white), // White text
                   ),
                 ),
                 IconButton(
                   icon: Icon(Icons.send),
                   onPressed: _sendMessage,
-                  color: Colors.purple,
+                  color: Colors.white, // White send icon
                 ),
               ],
             ),
@@ -132,3 +139,4 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 }
+//updating

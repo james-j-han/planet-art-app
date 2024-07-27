@@ -24,7 +24,7 @@ class ExploreDetailPage extends StatefulWidget {
 
 class _ExploreDetailPageState extends State<ExploreDetailPage> {
   late ScrollController _scrollController;
-  final double _itemHeight = 600; // Default item height
+  final double _itemHeight = 500; // Default item height
   bool _isScrollInitialized = false;
   String? _profileImageUrl; // To store the profile image URL
 
@@ -91,62 +91,21 @@ class _ExploreDetailPageState extends State<ExploreDetailPage> {
     });
   }
 
-  Future<void> _deletePost(String postId) async {
-    final User? user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('User not logged in')),
+  void _navigateToProfile(BuildContext context, String uid) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      final currentUserUid = currentUser.uid;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => uid == currentUserUid
+              ? AccountPage()
+              : UserProfilePage(
+                  uid: uid,
+                  posts: widget.posts, // Pass the posts list here
+                ),
+        ),
       );
-      return;
-    }
-
-    try {
-      final userPostRef = FirebaseFirestore.instance.collection('users').doc(user.uid).collection('posts').doc(postId);
-      final explorePostRef = FirebaseFirestore.instance.collection('explore_posts').doc(postId);
-
-      await userPostRef.delete();
-      print('Deleted from user post reference: ${userPostRef.path}');
-      
-      await explorePostRef.delete();
-      print('Deleted from explore post reference: ${explorePostRef.path}');
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Post deleted successfully')),
-      );
-    } catch (e) {
-      print('Error deleting post: ${e.toString()}');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error deleting post: ${e.toString()}')),
-      );
-    }
-  }
-
-  void _showDeleteConfirmationDialog() async {
-    if (_profileImageUrl == null) return;
-
-    bool? confirmed = await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Confirm Delete'),
-        content: Text('Are you sure you want to delete this post?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      await _deletePost(_profileImageUrl!);
-      setState(() {
-        _profileImageUrl = null; // Clear the postId after deletion
-      });
     }
   }
 
@@ -155,13 +114,6 @@ class _ExploreDetailPageState extends State<ExploreDetailPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Explore Posts', style: TextStyle(color: Colors.white)), // Set title text color to white
-        actions: [
-          if (_profileImageUrl != null) // Show delete button if postId is set
-            IconButton(
-              icon: Icon(Icons.delete),
-              onPressed: _showDeleteConfirmationDialog,
-            ),
-        ],
         backgroundColor: Color.fromARGB(255, 40, 35, 88), // AppBar background color
         iconTheme: IconThemeData(color: Colors.white), // Set icon color to white
       ),
@@ -236,16 +188,22 @@ class _ExploreDetailPageState extends State<ExploreDetailPage> {
             padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundImage: profileImageUrl.isNotEmpty
-                      ? CachedNetworkImageProvider(profileImageUrl)
-                      : NetworkImage('https://firebasestorage.googleapis.com/v0/b/planet-art-app.appspot.com/o/app%2Fabstract-textured-backgound_1258-30733%20(1).avif?alt=media&token=b15751c9-702c-46f2-b9a9-5cac4987d30f') as ImageProvider, // Default image if URL is null
+                GestureDetector(
+                  onTap: () => _navigateToProfile(context, postUid),
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundImage: profileImageUrl.isNotEmpty
+                        ? CachedNetworkImageProvider(profileImageUrl)
+                        : NetworkImage('https://firebasestorage.googleapis.com/v0/b/planet-art-app.appspot.com/o/app%2Fabstract-textured-backgound_1258-30733%20(1).avif?alt=media&token=b15751c9-702c-46f2-b9a9-5cac4987d30f') as ImageProvider, // Default image if URL is null
+                  ),
                 ),
                 SizedBox(width: 8),
-                Text(
-                  name,
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white), // Ensure text is visible
+                GestureDetector(
+                  onTap: () => _navigateToProfile(context, postUid),
+                  child: Text(
+                    name,
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white), // Ensure text is visible
+                  ),
                 ),
               ],
             ),
